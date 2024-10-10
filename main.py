@@ -81,14 +81,6 @@ class MainWindow(QMainWindow):
         self.song_select_label = QLabel("No song selected")
         self.song_select_label.setFont(QFont("sans-serif", italic=True))
 
-        self.tracker = QSlider()
-        self.tracker.setOrientation(Qt.Orientation.Horizontal)
-        self.tracker.setFixedHeight(50)
-
-
-        self.tracker_current_label = QLabel("00:00.00")
-        self.tracker_label_spacer = QSpacerItem(10, 10, QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Minimum)
-        self.tracker_duration_label = QLabel("00:00.00")
 
         self.pos_ctrl_section.addLayout(self.checkpoint_section)
         self.pos_ctrl_section.addLayout(self.media_ctrl_section)
@@ -187,12 +179,6 @@ class MainWindow(QMainWindow):
         # Widget placement
         self.song_select_section.addWidget(self.song_select_button)
         self.song_select_section.addWidget(self.song_select_label)
-
-        self.tracker_section.addWidget(self.tracker)
-        self.tracker_section.addLayout(self.tracker_labels_section)
-        self.tracker_labels_section.addWidget(self.tracker_current_label)
-        self.tracker_labels_section.addSpacerItem(self.tracker_label_spacer)
-        self.tracker_labels_section.addWidget(self.tracker_duration_label)
 
         self.checkpoint_section.addWidget(self.checkpoint1_set_button, 0, 0)
         self.checkpoint_section.addWidget(self.checkpoint1_ld_button, 1, 0)
@@ -314,14 +300,25 @@ class MainWindow(QMainWindow):
         self.media_ctrl_ld_fwd.clicked.connect(self.load_next_checkpoint)
 
         # Tracker functionality
-        self.new_tracker = TrackerWidget(self.player_other)
-        self.new_tracker.setBackgroundColor(self.palette().base().color())
-        self.new_tracker.setForegroundColor(self.palette().highlight().color())
+        self.tracker = TrackerWidget(self.player_other)
+        self.tracker.setBackgroundColor(self.palette().base().color())
+        self.tracker.setForegroundColor(self.palette().highlight().color())
+        self.tracker.setFixedHeight(100)
 
-        self.player_other.sourceChanged.connect(self.new_tracker.update_source)
-        self.tracker_section.addWidget(self.new_tracker)
+        self.player_other.sourceChanged.connect(self.tracker.update_source)
+        self.tracker_section.addWidget(self.tracker)
 
-        self.new_tracker.trackerMoved.connect(self.change_position)
+        self.tracker.trackerMoved.connect(self.change_position)
+
+        self.tracker_current_label = QLabel("00:00.00")
+        self.tracker_label_spacer = QSpacerItem(10, 10, QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Minimum)
+        self.tracker_duration_label = QLabel("00:00.00")
+
+        self.tracker_section.addLayout(self.tracker_labels_section)
+        self.tracker_labels_section.addWidget(self.tracker_current_label)
+        self.tracker_labels_section.addSpacerItem(self.tracker_label_spacer)
+        self.tracker_labels_section.addWidget(self.tracker_duration_label)
+
 
     def open_file(self):
         file_name = QFileDialog.getOpenFileName(self, caption="Open Audio File", filter="Audio Files (*.mp3 *.wav *.ogg *.opus *.m4a)")
@@ -356,9 +353,10 @@ class MainWindow(QMainWindow):
         current_pos = self.player_other.position()
         min_diff = math.inf
         prev_checkpoint = None
+        threshold = 250 # Number of milliseconds in which the checkpoint will not be counted
 
         for checkpoint in self.checkpoints.values():
-            if checkpoint >= current_pos:
+            if current_pos - checkpoint < threshold:
                 continue
             if (current_pos - checkpoint) < min_diff:
                 min_diff = (current_pos - checkpoint)
@@ -379,9 +377,10 @@ class MainWindow(QMainWindow):
         current_pos = self.player_other.position()
         min_diff = math.inf
         next_checkpoint = None
+        threshold = 250 # Number of milliseconds in which the checkpoint will not be counted
 
         for checkpoint in self.checkpoints.values():
-            if checkpoint <= current_pos:
+            if checkpoint - current_pos < threshold:
                 continue
             if (checkpoint - current_pos) < min_diff:
                 min_diff = (checkpoint - current_pos)
@@ -407,7 +406,7 @@ class MainWindow(QMainWindow):
 
     def set_checkpoint(self, index, position):
         self.checkpoints[index] = position
-        self.new_tracker.addCheckpoint(index, position, QColor.fromString(self.checkpoint_colors[index]))
+        self.tracker.addCheckpoint(index, position, QColor.fromString(self.checkpoint_colors[index]))
         match index:
             case 0:
                 self.checkpoint1_ld_button.setEnabled(True)
@@ -505,12 +504,12 @@ class MainWindow(QMainWindow):
     
     def update_duration(self, duration):
         self.media_duration = duration
-        self.new_tracker.setMaximum(duration)
+        self.tracker.setMaximum(duration)
         self.tracker_duration_label.setText(self._ms_to_timestamp(duration))
 
     def update_current_position(self, position):
         self.media_position = position
-        self.new_tracker.setTrackerPosition(self.media_position)
+        self.tracker.setTrackerPosition(self.media_position)
         self.tracker_current_label.setText(self._ms_to_timestamp(position))
     
     def volume_changed(self, value, track):

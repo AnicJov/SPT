@@ -16,11 +16,16 @@ class _Tracker(QtWidgets.QWidget):
         _min = self.parent().minimum()
         _max = self.parent().maximum()
         _width = painter.device().width()
+        _height = painter.device().height()
+
+        bar_width = 2
 
         # Paint checkpoints
         checkpoints = self.parent().checkpoints
         for checkpoint in checkpoints.values():
             brush = QtGui.QBrush()
+            color = checkpoint[1]
+            color.setAlpha(150)
             brush.setColor(checkpoint[1])
             brush.setStyle(Qt.BrushStyle.SolidPattern)
 
@@ -30,7 +35,7 @@ class _Tracker(QtWidgets.QWidget):
             if visual_position == _width - 1:
                 visual_position -= 1
             
-            rect = QtCore.QRect(visual_position, 0, 2, painter.device().height())
+            rect = QtCore.QRect(visual_position, 0, bar_width, painter.device().height())
             painter.fillRect(rect, brush)
 
         # Paint current position
@@ -38,14 +43,30 @@ class _Tracker(QtWidgets.QWidget):
         brush.setColor(QtGui.QColor.fromString("#f38ba8"))
         brush.setStyle(Qt.BrushStyle.SolidPattern)
 
+        bar_width = 1
+        triangle_size = 4
+
         visual_position = int(np.interp(_pos, [_min, _max], [0, _width]))
 
-        if visual_position == _width:
-            visual_position -= 2
         if visual_position == _width - 1:
             visual_position -= 1
 
-        rect = QtCore.QRect(visual_position, 0, 2, painter.device().height())
+        rect = QtCore.QRect(visual_position, 0, bar_width, painter.device().height())
+
+        triangle_top = QtGui.QPainterPath()
+        triangle_top.moveTo(visual_position - triangle_size, 0)
+        triangle_top.lineTo(visual_position + triangle_size, 0)
+        triangle_top.lineTo(visual_position, triangle_size)
+        triangle_top.lineTo(visual_position - triangle_size, 0)
+
+        triangle_bot = QtGui.QPainterPath()
+        triangle_bot.moveTo(visual_position - triangle_size, _height)
+        triangle_bot.lineTo(visual_position + triangle_size, _height)
+        triangle_bot.lineTo(visual_position, _height - triangle_size)
+        triangle_bot.lineTo(visual_position - triangle_size, _height)
+
+        painter.fillPath(triangle_top, brush)
+        painter.fillPath(triangle_bot, brush)
         painter.fillRect(rect, brush)
 
         painter.end()
@@ -64,7 +85,6 @@ class TrackerWidget(QtWidgets.QWidget):
 
     checkpoints = {}
 
-    # FIXME: Add visual checkpoint functionality
     # FIXME: Handle visualizing multiple tracks
 
     trackerMoved = QtCore.pyqtSignal(int)
