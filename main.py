@@ -86,39 +86,21 @@ class MainWindow(QMainWindow):
         self.pos_ctrl_section.addLayout(self.checkpoint_section)
         self.pos_ctrl_section.addLayout(self.media_ctrl_section)
 
-        self.checkpoint_button_size = QSize(30, 30)
-        self.checkpoint1_set_button = ColorButton("S1")
-        self.checkpoint1_set_button.setFixedSize(self.checkpoint_button_size)
-        self.checkpoint1_set_button.setHighlightColor(self.checkpoint_colors[0])
-        self.checkpoint1_ld_button = ColorButton("L1")
-        self.checkpoint1_ld_button.setFixedSize(self.checkpoint_button_size)
-        self.checkpoint1_ld_button.setHighlightColor(self.checkpoint_colors[0])
-        self.checkpoint1_ld_button.setHighlighted(False)
-        self.checkpoint1_ld_button.setDisabled(True)
-        self.checkpoint2_set_button = ColorButton("S2")
-        self.checkpoint2_set_button.setFixedSize(self.checkpoint_button_size)
-        self.checkpoint2_set_button.setHighlightColor(self.checkpoint_colors[1])
-        self.checkpoint2_ld_button = ColorButton("L2")
-        self.checkpoint2_ld_button.setFixedSize(self.checkpoint_button_size)
-        self.checkpoint2_ld_button.setHighlighted(False)
-        self.checkpoint2_ld_button.setHighlightColor(self.checkpoint_colors[1])
-        self.checkpoint2_ld_button.setDisabled(True)
-        self.checkpoint3_set_button = ColorButton("S3")
-        self.checkpoint3_set_button.setFixedSize(self.checkpoint_button_size)
-        self.checkpoint3_set_button.setHighlightColor(self.checkpoint_colors[2])
-        self.checkpoint3_ld_button = ColorButton("L3")
-        self.checkpoint3_ld_button.setFixedSize(self.checkpoint_button_size)
-        self.checkpoint3_ld_button.setHighlightColor(self.checkpoint_colors[2])
-        self.checkpoint3_ld_button.setHighlighted(False)
-        self.checkpoint3_ld_button.setDisabled(True)
-        self.checkpoint4_set_button = ColorButton("S4")
-        self.checkpoint4_set_button.setFixedSize(self.checkpoint_button_size)
-        self.checkpoint4_set_button.setHighlightColor(self.checkpoint_colors[3])
-        self.checkpoint4_ld_button = ColorButton("L4")
-        self.checkpoint4_ld_button.setFixedSize(self.checkpoint_button_size)
-        self.checkpoint4_ld_button.setHighlightColor(self.checkpoint_colors[3])
-        self.checkpoint4_ld_button.setHighlighted(False)
-        self.checkpoint4_ld_button.setDisabled(True)
+        self.num_checkpoints = 4
+        self.checkpoint_buttons = []
+        checkpoint_button_size = QSize(30, 30)
+        for i in range(self.num_checkpoints):
+            checkpoint_set = ColorButton(f"S{i+1}")
+            checkpoint_set.setFixedSize(checkpoint_button_size)
+            checkpoint_set.setHighlightColor(self.checkpoint_colors[i % len(self.checkpoint_colors)])
+
+            checkpoint_load = ColorButton(f"L{i+1}")
+            checkpoint_load.setFixedSize(checkpoint_button_size)
+            checkpoint_load.setHighlightColor(self.checkpoint_colors[i % len(self.checkpoint_colors)])
+            checkpoint_load.setHighlighted(False)
+            checkpoint_load.setDisabled(True)
+
+            self.checkpoint_buttons.append((checkpoint_set, checkpoint_load))
 
         self.media_button_size = QSize(40, 40)
         self.media_ctrl_ld_back = QPushButton(QIcon.fromTheme("media-skip-backward"), "")
@@ -181,14 +163,9 @@ class MainWindow(QMainWindow):
         self.song_select_section.addWidget(self.song_select_button)
         self.song_select_section.addWidget(self.song_select_label)
 
-        self.checkpoint_section.addWidget(self.checkpoint1_set_button, 0, 0)
-        self.checkpoint_section.addWidget(self.checkpoint1_ld_button, 1, 0)
-        self.checkpoint_section.addWidget(self.checkpoint2_set_button, 0, 1)
-        self.checkpoint_section.addWidget(self.checkpoint2_ld_button, 1, 1)
-        self.checkpoint_section.addWidget(self.checkpoint3_set_button, 0, 2)
-        self.checkpoint_section.addWidget(self.checkpoint3_ld_button, 1, 2)
-        self.checkpoint_section.addWidget(self.checkpoint4_set_button, 0, 3)
-        self.checkpoint_section.addWidget(self.checkpoint4_ld_button, 1, 3)
+        for i, buttons in enumerate(self.checkpoint_buttons):
+            self.checkpoint_section.addWidget(buttons[0], 0, i)
+            self.checkpoint_section.addWidget(buttons[1], 1, i)
 
         self.media_ctrl_section.addWidget(self.media_ctrl_ld_back)
         self.media_ctrl_section.addWidget(self.media_ctrl_back)
@@ -202,6 +179,7 @@ class MainWindow(QMainWindow):
         self.speed_fine_section.addWidget(self.min_speed_label)
         self.speed_fine_section.addWidget(self.speed_ctrl_slider)
         self.speed_fine_section.addWidget(self.max_speed_label)
+
         for button, speed in self.speed_ctrl_buttons:
             self.speed_coarse_section.addWidget(button)
 
@@ -273,16 +251,10 @@ class MainWindow(QMainWindow):
             button.clicked.connect((lambda speed: lambda: self.set_playback_speed(speed))(speed)) # lambda magic
 
         # Checkpoint functionality
-        self.checkpoint1_set_button.clicked.connect(lambda: self.set_checkpoint(0, self.player_other.position()))
-        self.checkpoint2_set_button.clicked.connect(lambda: self.set_checkpoint(1, self.player_other.position()))
-        self.checkpoint3_set_button.clicked.connect(lambda: self.set_checkpoint(2, self.player_other.position()))
-        self.checkpoint4_set_button.clicked.connect(lambda: self.set_checkpoint(3, self.player_other.position()))
-
-        self.checkpoint1_ld_button.clicked.connect(lambda: self.load_checkpoint(0))
-        self.checkpoint2_ld_button.clicked.connect(lambda: self.load_checkpoint(1))
-        self.checkpoint3_ld_button.clicked.connect(lambda: self.load_checkpoint(2))
-        self.checkpoint4_ld_button.clicked.connect(lambda: self.load_checkpoint(3))
-
+        for i, buttons in enumerate(self.checkpoint_buttons):
+            buttons[0].clicked.connect((lambda i: lambda: self.set_checkpoint(i, self.player_other.position()))(i))
+            buttons[1].clicked.connect((lambda i: lambda: self.load_checkpoint(i))(i))
+        
         self.media_ctrl_ld_back.clicked.connect(self.load_previous_checkpoint)
         self.media_ctrl_ld_fwd.clicked.connect(self.load_next_checkpoint)
 
@@ -393,20 +365,9 @@ class MainWindow(QMainWindow):
 
     def set_checkpoint(self, index, position):
         self.checkpoints[index] = position
-        self.tracker.addCheckpoint(index, position, QColor.fromString(self.checkpoint_colors[index]))
-        match index:
-            case 0:
-                self.checkpoint1_ld_button.setEnabled(True)
-                self.checkpoint1_ld_button.setHighlighted(True)
-            case 1:
-                self.checkpoint2_ld_button.setEnabled(True)
-                self.checkpoint2_ld_button.setHighlighted(True)
-            case 2:
-                self.checkpoint3_ld_button.setEnabled(True)
-                self.checkpoint3_ld_button.setHighlighted(True)
-            case 3:
-                self.checkpoint4_ld_button.setEnabled(True)
-                self.checkpoint4_ld_button.setHighlighted(True)
+        self.tracker.addCheckpoint(index, position, QColor.fromString(self.checkpoint_colors[index % len(self.checkpoint_colors)]))
+        self.checkpoint_buttons[index][1].setEnabled(True)
+        self.checkpoint_buttons[index][1].setHighlighted(True)
 
     def set_playback_speed(self, speed):
         self.speed_ctrl_slider.setValue(self._interpolate_slider_value(speed))
