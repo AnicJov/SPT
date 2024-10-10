@@ -20,6 +20,8 @@ Written in Python and PyQt6, using [demucs](https://github.com/facebookresearch/
 - Instrument stem volume mixer
 
 Planned:
+- Section looping
+- Session saving/restoring
 - URL import support
 - Keyboard shortcuts support
 - Built in metronome with beat detection
