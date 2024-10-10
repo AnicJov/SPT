@@ -2,18 +2,27 @@
 > 🚧 This project is incomplete and WIP. 🚧
 
 # SPT - Song Practice Tool
+
+<p align="center">
+<img src="https://raw.githubusercontent.com/AnicJov/SPT/main/res/preview.png"/>
+</p>
+
+
 This is a cross-platform tool that aims to help musicians practice songs with features that make repeating sections easy and playing along fun.
 
 Written in Python and PyQt6, using [demucs](https://github.com/facebookresearch/demucs) for instrument separation.
 
-### (Planned) Features:
+### Features:
 - Music player functions
-- Keyboard shortcuts support
-- URL import support
 - Playback speed control
 - Save/Load section markers
 - Automatic instrument stem separation
 - Instrument stem volume mixer
+
+Planned:
+- URL import support
+- Keyboard shortcuts support
+- Built in metronome with beat detection
 - Built in PDF viewer for viewing notation
 
 ## Usage
