@@ -18,14 +18,14 @@ Written in Python and PyQt6, using [demucs](https://github.com/facebookresearch/
 - Save/Load section markers
 - Automatic instrument stem separation
 - Instrument stem volume mixer
+- Section looping
+- Keyboard shortcuts support
 
 Planned:
-- Section looping
-- Session saving/restoring
 - URL import support
-- Keyboard shortcuts support
 - Built in metronome with beat detection
 - Built in PDF viewer for viewing notation
+- Session saving/restoring
 
 ## Usage
 
