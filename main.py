@@ -137,25 +137,13 @@ class MainWindow(QMainWindow):
         self.max_speed_label = QLabel("x2")
         self.speed_ctrl_slider = QSlider(Qt.Orientation.Horizontal)
         
+        self.speed_ctrl_buttons = []
         speed_ctrl_button_size = QSize(40, 25)
-        self.speed_ctrl_button_p5 = QPushButton("x0.5")
-        self.speed_ctrl_button_p75 = QPushButton("x0.75")
-        self.speed_ctrl_button_p8 = QPushButton("x0.8")
-        self.speed_ctrl_button_p9 = QPushButton("x0.9")
-        self.speed_ctrl_button_1 = QPushButton("x1")
-        self.speed_ctrl_button_1p1 = QPushButton("x1.1")
-        self.speed_ctrl_button_1p2 = QPushButton("x1.2")
-        self.speed_ctrl_button_1p3 = QPushButton("x1.3")
-        self.speed_ctrl_button_1p5 = QPushButton("x1.5")
-        self.speed_ctrl_button_p5.setFixedSize(speed_ctrl_button_size)
-        self.speed_ctrl_button_p75.setFixedSize(speed_ctrl_button_size)
-        self.speed_ctrl_button_p8.setFixedSize(speed_ctrl_button_size)
-        self.speed_ctrl_button_p9.setFixedSize(speed_ctrl_button_size)
-        self.speed_ctrl_button_1.setFixedSize(speed_ctrl_button_size)
-        self.speed_ctrl_button_1p1.setFixedSize(speed_ctrl_button_size)
-        self.speed_ctrl_button_1p2.setFixedSize(speed_ctrl_button_size)
-        self.speed_ctrl_button_1p3.setFixedSize(speed_ctrl_button_size)
-        self.speed_ctrl_button_1p5.setFixedSize(speed_ctrl_button_size)
+        predefined_speeds = [0.5, 0.75, 0.8, 0.9, 1, 1.1, 1.2, 1.3, 1.5]
+        for speed in predefined_speeds:
+            button = QPushButton(f"x{speed}")
+            button.setFixedSize(speed_ctrl_button_size)
+            self.speed_ctrl_buttons.append((button, speed))
 
         palette = self.palette()
         self.mixer_drums = MixerWidget(labelText="Drums")
@@ -214,15 +202,8 @@ class MainWindow(QMainWindow):
         self.speed_fine_section.addWidget(self.min_speed_label)
         self.speed_fine_section.addWidget(self.speed_ctrl_slider)
         self.speed_fine_section.addWidget(self.max_speed_label)
-        self.speed_coarse_section.addWidget(self.speed_ctrl_button_p5)
-        self.speed_coarse_section.addWidget(self.speed_ctrl_button_p75)
-        self.speed_coarse_section.addWidget(self.speed_ctrl_button_p8)
-        self.speed_coarse_section.addWidget(self.speed_ctrl_button_p9)
-        self.speed_coarse_section.addWidget(self.speed_ctrl_button_1)
-        self.speed_coarse_section.addWidget(self.speed_ctrl_button_1p1)
-        self.speed_coarse_section.addWidget(self.speed_ctrl_button_1p2)
-        self.speed_coarse_section.addWidget(self.speed_ctrl_button_1p3)
-        self.speed_coarse_section.addWidget(self.speed_ctrl_button_1p5)
+        for button, speed in self.speed_ctrl_buttons:
+            self.speed_coarse_section.addWidget(button)
 
         self.mixer_section.addWidget(self.mixer_drums)
         self.mixer_section.addWidget(self.mixer_bass)
@@ -288,15 +269,8 @@ class MainWindow(QMainWindow):
         # Speed control functionality
         self.speed_ctrl_slider.setValue(50)
         self.speed_ctrl_slider.valueChanged.connect(self.update_playback_speed)
-        self.speed_ctrl_button_p5.clicked.connect(lambda: self.set_playback_speed(0.5))
-        self.speed_ctrl_button_p75.clicked.connect(lambda: self.set_playback_speed(0.75))
-        self.speed_ctrl_button_p8.clicked.connect(lambda: self.set_playback_speed(0.8))
-        self.speed_ctrl_button_p9.clicked.connect(lambda: self.set_playback_speed(0.9))
-        self.speed_ctrl_button_1.clicked.connect(lambda: self.set_playback_speed(1))
-        self.speed_ctrl_button_1p1.clicked.connect(lambda: self.set_playback_speed(1.1))
-        self.speed_ctrl_button_1p2.clicked.connect(lambda: self.set_playback_speed(1.2))
-        self.speed_ctrl_button_1p3.clicked.connect(lambda: self.set_playback_speed(1.3))
-        self.speed_ctrl_button_1p5.clicked.connect(lambda: self.set_playback_speed(1.5))
+        for button, speed in self.speed_ctrl_buttons:
+            button.clicked.connect((lambda speed: lambda: self.set_playback_speed(speed))(speed)) # lambda magic
 
         # Checkpoint functionality
         self.checkpoint1_set_button.clicked.connect(lambda: self.set_checkpoint(0, self.player_other.position()))
