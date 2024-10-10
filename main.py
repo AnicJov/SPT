@@ -285,8 +285,6 @@ class MainWindow(QMainWindow):
         self.player_other.positionChanged.connect(self.update_current_position)
         self.player_other.playbackStateChanged.connect(self.update_playback_state)
 
-        self.tracker.sliderMoved.connect(self.change_position)
-
         # Speed control functionality
         self.speed_ctrl_slider.setValue(50)
         self.speed_ctrl_slider.valueChanged.connect(self.update_playback_speed)
@@ -321,6 +319,8 @@ class MainWindow(QMainWindow):
 
         self.player_other.sourceChanged.connect(self.new_tracker.update_source)
         self.tracker_section.addWidget(self.new_tracker)
+
+        self.new_tracker.trackerMoved.connect(self.change_position)
 
     def open_file(self):
         file_name = QFileDialog.getOpenFileName(self, caption="Open Audio File", filter="Audio Files (*.mp3 *.wav *.ogg *.opus *.m4a)")
@@ -503,12 +503,12 @@ class MainWindow(QMainWindow):
     
     def update_duration(self, duration):
         self.media_duration = duration
-        self.tracker.setMaximum(duration)
+        self.new_tracker.setMaximum(duration)
         self.tracker_duration_label.setText(self._ms_to_timestamp(duration))
 
     def update_current_position(self, position):
         self.media_position = position
-        self.tracker.setSliderPosition(self.media_position)
+        self.new_tracker.setTrackerPosition(self.media_position)
         self.tracker_current_label.setText(self._ms_to_timestamp(position))
     
     def volume_changed(self, value, track):
