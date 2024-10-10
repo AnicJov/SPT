@@ -40,6 +40,7 @@ class MainWindow(QMainWindow):
     master_track_volume = 1
 
     checkpoints = {}
+    checkpoint_colors = ["#a6e3a1", "#89b4fa", "#f9e2af", "#f5c2e7"]
 
     def __init__(self):
         super().__init__()
@@ -406,6 +407,7 @@ class MainWindow(QMainWindow):
 
     def set_checkpoint(self, index, position):
         self.checkpoints[index] = position
+        self.new_tracker.addCheckpoint(index, position, QColor.fromString(self.checkpoint_colors[index]))
         match index:
             case 0:
                 self.checkpoint1_ld_button.setEnabled(True)

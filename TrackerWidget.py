@@ -12,14 +12,31 @@ class _Tracker(QtWidgets.QWidget):
     def paintEvent(self, e):
         painter = QtGui.QPainter(self)
 
-        brush = QtGui.QBrush()
-        brush.setColor(QtGui.QColor.fromString("#f38ba8"))
-        brush.setStyle(Qt.BrushStyle.SolidPattern)
-
         _pos = self.parent().position()
         _min = self.parent().minimum()
         _max = self.parent().maximum()
         _width = painter.device().width()
+
+        # Paint checkpoints
+        checkpoints = self.parent().checkpoints
+        for checkpoint in checkpoints.values():
+            brush = QtGui.QBrush()
+            brush.setColor(checkpoint[1])
+            brush.setStyle(Qt.BrushStyle.SolidPattern)
+
+            visual_position = int(np.interp(checkpoint[0], [_min, _max], [0, _width]))
+            if visual_position == _width:
+                visual_position -= 2
+            if visual_position == _width - 1:
+                visual_position -= 1
+            
+            rect = QtCore.QRect(visual_position, 0, 2, painter.device().height())
+            painter.fillRect(rect, brush)
+
+        # Paint current position
+        brush = QtGui.QBrush()
+        brush.setColor(QtGui.QColor.fromString("#f38ba8"))
+        brush.setStyle(Qt.BrushStyle.SolidPattern)
 
         visual_position = int(np.interp(_pos, [_min, _max], [0, _width]))
 
@@ -30,6 +47,7 @@ class _Tracker(QtWidgets.QWidget):
 
         rect = QtCore.QRect(visual_position, 0, 2, painter.device().height())
         painter.fillRect(rect, brush)
+
         painter.end()
 
 
@@ -43,6 +61,8 @@ class TrackerWidget(QtWidgets.QWidget):
     _position = 0
     _minimum = 0
     _maximum = 100
+
+    checkpoints = {}
 
     # FIXME: Add visual checkpoint functionality
     # FIXME: Handle visualizing multiple tracks
@@ -193,3 +213,6 @@ class TrackerWidget(QtWidgets.QWidget):
     def maximum(self):
         return self._maximum
     
+    def addCheckpoint(self, index, position, color):
+        self.checkpoints[index] = (position, color)
+        self.tracker.update()
