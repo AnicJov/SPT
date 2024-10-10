@@ -81,7 +81,6 @@ class _Bar(QtWidgets.QWidget):
 
         pc = int(self.n_steps - click_y)
         value = int(vmin + pc * (vmax / self.n_steps))
-        print(value)
         self.clicked_value.emit(value)
 
     def mouseMoveEvent(self, e):
@@ -99,6 +98,7 @@ class MixerWidget(QtWidgets.QWidget):
     """
     
     colorChanged = QtCore.pyqtSignal()
+    volumeChanged = QtCore.pyqtSignal(int)
 
     def __init__(self, labelText="volume", steps=10, *args, **kwargs):
         super(MixerWidget, self).__init__(*args, **kwargs)
@@ -134,7 +134,10 @@ class MixerWidget(QtWidgets.QWidget):
         self.setLayout(layout)
 
         self._bar.clicked_value.connect(self._dial.setValue)
+        self._dial.valueChanged.connect(self._value_changed)
         
+    def _value_changed(self, value):
+        self.volumeChanged.emit(value)
 
     def sizeHint(self):
         return QtCore.QSize(60, 300)
@@ -162,3 +165,6 @@ class MixerWidget(QtWidgets.QWidget):
     def setBackgroundColor(self, color):
         self._bar._background_color = color
         self._bar.update()
+    
+    def value(self):
+        self._dial.value()
