@@ -23,6 +23,9 @@ class _Tracker(QtWidgets.QWidget):
         # Paint checkpoints
         checkpoints = self.parent().checkpoints
         for checkpoint in checkpoints.values():
+            if checkpoint is None:
+                continue
+
             brush = QtGui.QBrush()
             color = checkpoint[1]
             color.setAlpha(150)
@@ -247,4 +250,8 @@ class TrackerWidget(QtWidgets.QWidget):
     
     def addCheckpoint(self, index, position, color):
         self.checkpoints[index] = (position, color)
+        self.tracker.update()
+
+    def removeCheckpoint(self, index):
+        self.checkpoints[index] = None
         self.tracker.update()

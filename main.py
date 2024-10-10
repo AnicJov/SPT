@@ -379,6 +379,15 @@ class MainWindow(QMainWindow):
             self.player_other.setPosition(self.checkpoints[index])
 
     def set_checkpoint(self, index, position):
+        # If checkpoint exists in the same position unset it instead
+        if index in self.checkpoints and self.checkpoints[index] == position:
+            del self.checkpoints[index]
+            self.tracker.removeCheckpoint(index)
+            self.checkpoint_buttons[index][1].setEnabled(False)
+            self.checkpoint_buttons[index][1].setHighlighted(False)
+            return
+
+        # Otherwise set the checkpoint
         self.checkpoints[index] = position
         self.tracker.addCheckpoint(index, position, QColor.fromString(self.checkpoint_colors[index % len(self.checkpoint_colors)]))
         self.checkpoint_buttons[index][1].setEnabled(True)
