@@ -26,6 +26,7 @@ import demucs.separate
 
 from MixerWidget import MixerWidget
 from TrackerWidget import TrackerWidget
+from ColorButton import ColorButton
 
 
 class MainWindow(QMainWindow):
@@ -86,25 +87,37 @@ class MainWindow(QMainWindow):
         self.pos_ctrl_section.addLayout(self.media_ctrl_section)
 
         self.checkpoint_button_size = QSize(30, 30)
-        self.checkpoint1_set_button = QPushButton("S1")
+        self.checkpoint1_set_button = ColorButton("S1")
         self.checkpoint1_set_button.setFixedSize(self.checkpoint_button_size)
-        self.checkpoint1_ld_button = QPushButton("L1")
+        self.checkpoint1_set_button.setHighlightColor(self.checkpoint_colors[0])
+        self.checkpoint1_ld_button = ColorButton("L1")
         self.checkpoint1_ld_button.setFixedSize(self.checkpoint_button_size)
+        self.checkpoint1_ld_button.setHighlightColor(self.checkpoint_colors[0])
+        self.checkpoint1_ld_button.setHighlighted(False)
         self.checkpoint1_ld_button.setDisabled(True)
-        self.checkpoint2_set_button = QPushButton("S2")
+        self.checkpoint2_set_button = ColorButton("S2")
         self.checkpoint2_set_button.setFixedSize(self.checkpoint_button_size)
-        self.checkpoint2_ld_button = QPushButton("L2")
+        self.checkpoint2_set_button.setHighlightColor(self.checkpoint_colors[1])
+        self.checkpoint2_ld_button = ColorButton("L2")
         self.checkpoint2_ld_button.setFixedSize(self.checkpoint_button_size)
+        self.checkpoint2_ld_button.setHighlighted(False)
+        self.checkpoint2_ld_button.setHighlightColor(self.checkpoint_colors[1])
         self.checkpoint2_ld_button.setDisabled(True)
-        self.checkpoint3_set_button = QPushButton("S3")
+        self.checkpoint3_set_button = ColorButton("S3")
         self.checkpoint3_set_button.setFixedSize(self.checkpoint_button_size)
-        self.checkpoint3_ld_button = QPushButton("L3")
+        self.checkpoint3_set_button.setHighlightColor(self.checkpoint_colors[2])
+        self.checkpoint3_ld_button = ColorButton("L3")
         self.checkpoint3_ld_button.setFixedSize(self.checkpoint_button_size)
+        self.checkpoint3_ld_button.setHighlightColor(self.checkpoint_colors[2])
+        self.checkpoint3_ld_button.setHighlighted(False)
         self.checkpoint3_ld_button.setDisabled(True)
-        self.checkpoint4_set_button = QPushButton("S4")
+        self.checkpoint4_set_button = ColorButton("S4")
         self.checkpoint4_set_button.setFixedSize(self.checkpoint_button_size)
-        self.checkpoint4_ld_button = QPushButton("L4")
+        self.checkpoint4_set_button.setHighlightColor(self.checkpoint_colors[3])
+        self.checkpoint4_ld_button = ColorButton("L4")
         self.checkpoint4_ld_button.setFixedSize(self.checkpoint_button_size)
+        self.checkpoint4_ld_button.setHighlightColor(self.checkpoint_colors[3])
+        self.checkpoint4_ld_button.setHighlighted(False)
         self.checkpoint4_ld_button.setDisabled(True)
 
         self.media_button_size = QSize(40, 40)
@@ -410,12 +423,16 @@ class MainWindow(QMainWindow):
         match index:
             case 0:
                 self.checkpoint1_ld_button.setEnabled(True)
+                self.checkpoint1_ld_button.setHighlighted(True)
             case 1:
                 self.checkpoint2_ld_button.setEnabled(True)
+                self.checkpoint2_ld_button.setHighlighted(True)
             case 2:
                 self.checkpoint3_ld_button.setEnabled(True)
+                self.checkpoint3_ld_button.setHighlighted(True)
             case 3:
                 self.checkpoint4_ld_button.setEnabled(True)
+                self.checkpoint4_ld_button.setHighlighted(True)
 
     def set_playback_speed(self, speed):
         self.speed_ctrl_slider.setValue(self._interpolate_slider_value(speed))

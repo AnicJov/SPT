@@ -1,6 +1,8 @@
 from PyQt6 import QtCore, QtGui, QtWidgets
 from PyQt6.QtCore import Qt
 
+from ColorButton import ColorButton
+
 
 class _Bar(QtWidgets.QWidget):
     clicked_value = QtCore.pyqtSignal(int)
@@ -126,11 +128,17 @@ class MixerWidget(QtWidgets.QWidget):
 
         buttons_layout = QtWidgets.QHBoxLayout()
 
-        self.button_mute = QtWidgets.QPushButton("M")
+        self.button_mute = ColorButton("M")
         self.button_mute.setFixedSize(QtCore.QSize(20, 20))
+        self.button_mute.setHighlightColor("#f38ba8")
+        self.button_mute.setHighlightPadding(3)
+        self.button_mute.setHighlighted(False)
         buttons_layout.addWidget(self.button_mute)
-        self.button_solo = QtWidgets.QPushButton("S")
+        self.button_solo = ColorButton("S")
         self.button_solo.setFixedSize(QtCore.QSize(20, 20))
+        self.button_solo.setHighlightColor("#94e2d5")
+        self.button_solo.setHighlightPadding(3)
+        self.button_solo.setHighlighted(False)
         buttons_layout.addWidget(self.button_solo)
         layout.addLayout(buttons_layout)
         
@@ -152,9 +160,11 @@ class MixerWidget(QtWidgets.QWidget):
     def _toggle_mute(self):
         if self.muted == False:
             self.muted = True
+            self.button_mute.setHighlighted(True)
             self.trackMuted.emit(True, self.label)
         else:
             self.muted = False
+            self.button_mute.setHighlighted(False)
             self.trackMuted.emit(False, self.label)
         self._bar.update()
 
