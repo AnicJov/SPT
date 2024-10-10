@@ -8,6 +8,9 @@ Written in Python and PyQt6, using demucs for instrument separation.
 
 ### (Planned) Features:
 - Music player functions
+- Keyboard shortcuts support
+- URL import support
+- Playback speed control
 - Save/Load section markers
 - Automatic instrument stem separation
 - Instrument stem volume mixer
