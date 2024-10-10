@@ -1,4 +1,5 @@
 import sys
+from datetime import datetime
 
 from PyQt6.QtCore import Qt, QSize, QUrl
 from PyQt6.QtGui import QIcon, QPalette, QColor, QFont
@@ -24,6 +25,8 @@ from MixerWidget import MixerWidget
 class MainWindow(QMainWindow):
     window_title = "SPT - Song Practice Tool"
     media_state = "inactive"
+    media_duration = 0
+    media_position = 0
 
     def __init__(self):
         super().__init__()
@@ -178,23 +181,58 @@ class MainWindow(QMainWindow):
         
         # Audio functionality
         filename = "song.mp3"
+
         self.player = QMediaPlayer()
         self.audio_output = QAudioOutput()
         self.player.setAudioOutput(self.audio_output)
         self.player.setSource(QUrl.fromLocalFile(filename))
         self.audio_output.setVolume(100)
-        self.mixer_master.volumeChanged.connect(self.volume_changed)
 
+        self.mixer_master.volumeChanged.connect(self.volume_changed)
         self.media_ctrl_play_pause.clicked.connect(self.play_pause)
+        self.player.durationChanged.connect(self.update_duration)
+        self.player.positionChanged.connect(self.update_current_position)
+        self.player.playbackStateChanged.connect(self.update_playback_state)
+        self.tracker.sliderMoved.connect(self.change_position)
+
+    def update_playback_state(self, state):
+        if state == QMediaPlayer.PlaybackState.PlayingState:
+            self.media_state = "playing"
+            self.media_ctrl_play_pause.setIcon(QIcon.fromTheme("media-pause"))
+        elif state == QMediaPlayer.PlaybackState.PausedState:
+            self.media_state = "paused"
+            self.media_ctrl_play_pause.setIcon(QIcon.fromTheme("media-play"))
+        elif state == QMediaPlayer.PlaybackState.StoppedState:
+            self.media_state = "stopped"
+            self.media_ctrl_play_pause.setIcon(QIcon.fromTheme("media-play"))
+
+    def change_position(self, value):
+        self.player.setPosition(value)
+    
+    def update_duration(self, duration):
+        self.media_duration = duration
+        self.tracker.setMaximum(duration)
+        self.tracker_duration_label.setText(self._ms_to_timestamp(duration))
+
+    def update_current_position(self, position):
+        self.media_position = position
+        self.tracker.setSliderPosition(self.media_position)
+        self.tracker_current_label.setText(self._ms_to_timestamp(position))
     
     def volume_changed(self, value):
         self.audio_output.setVolume(value / 100)
 
     def play_pause(self):
-        if self.media_state != "playing":
+        if self.media_state == "inactive":
             self.play()
-        else:
+        elif self.media_state == "paused":
+            self.play()
+        elif self.media_state == "stopped":
+            self.restart()
+        elif self.media_state == "playing":
             self.pause()
+        else:
+            print(f"Error: Unknown playback state '{self.media_state}'")
 
     def play(self):
         self.media_state = "playing"
@@ -205,6 +243,42 @@ class MainWindow(QMainWindow):
         self.media_state = "paused"
         self.media_ctrl_play_pause.setIcon(QIcon.fromTheme("media-play"))
         self.player.pause()
+
+    def restart(self):
+        self.media_state = "playing"
+        self.media_ctrl_play_pause.setIcon(QIcon.fromTheme("media-pause"))
+        self.player.setPosition(0)
+        self.player.play()
+    
+    @staticmethod
+    def _ms_to_timestamp(ms):
+        minutes = ms // 60000
+        seconds = (ms % 60000) // 1000
+        millies = ms % 1000
+        return f"{minutes:02d}:{seconds:02d}.{millies:02d}"
+    
+    @staticmethod
+    def _ms_to_percentage(current, duration):
+        start_time = 0
+
+        if duration == start_time:
+            return 100 
+        if current >= duration:
+            return 100
+
+        elapsed_time = current - start_time
+        total_time = duration - start_time
+        percentage = (elapsed_time / total_time) * 100
+
+        return percentage
+
+    @staticmethod
+    def _percentage_to_ms(percentage, duration):
+        start_time = 0
+        result_time = start_time + (percentage / 100) * duration
+
+        return result_time
+
 
 
 def main():
