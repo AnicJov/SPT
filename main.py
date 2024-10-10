@@ -1,4 +1,5 @@
 import sys
+from os import path
 import math
 from datetime import datetime
 
@@ -18,6 +19,7 @@ from PyQt6.QtWidgets import (
     QHBoxLayout,
     QLayout,
     QGridLayout,
+    QFileDialog,
 )
 
 from MixerWidget import MixerWidget
@@ -25,6 +27,7 @@ from MixerWidget import MixerWidget
 
 class MainWindow(QMainWindow):
     window_title = "SPT - Song Practice Tool"
+    media_filename = ""
     media_state = "inactive"
     media_duration = 0
     media_position = 0
@@ -225,14 +228,15 @@ class MainWindow(QMainWindow):
         self.main_widget = QWidget()
         self.main_widget.setLayout(self.main_layout)
         self.setCentralWidget(self.main_widget)
+
+        # File selection functionality
+        self.song_select_button.clicked.connect(self.open_file)
         
         # Audio functionality
-        filename = "song.mp3"
-
         self.player = QMediaPlayer()
         self.audio_output = QAudioOutput()
         self.player.setAudioOutput(self.audio_output)
-        self.player.setSource(QUrl.fromLocalFile(filename))
+        # self.player.setSource(QUrl.fromLocalFile(filename))
         self.audio_output.setVolume(100)
 
         self.mixer_master.volumeChanged.connect(self.volume_changed)
@@ -274,6 +278,20 @@ class MainWindow(QMainWindow):
 
         self.media_ctrl_ld_back.clicked.connect(self.load_previous_checkpoint)
         self.media_ctrl_ld_fwd.clicked.connect(self.load_next_checkpoint)
+
+    def open_file(self):
+        file_name = QFileDialog.getOpenFileName(self, caption="Open Audio File", filter="Audio Files (*.mp3 *.wav *.ogg *.opus *.m4a)")
+
+        if not path.isfile(file_name[0]):
+            print("Error: Could not open file")
+            return
+
+        if len(file_name[0]) < 30:
+            self.song_select_label.setText(file_name[0])
+        else:
+            self.song_select_label.setText(path.basename(file_name[0]))
+        self.song_select_label.setFont(QFont("sans-serif", False))
+        self.player.setSource(QUrl.fromLocalFile(file_name[0]))
 
     def load_previous_checkpoint(self):
         current_pos = self.player.position()
