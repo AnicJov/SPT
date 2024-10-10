@@ -1,4 +1,5 @@
 import sys
+import math
 from datetime import datetime
 
 from PyQt6.QtCore import Qt, QSize, QUrl
@@ -27,6 +28,7 @@ class MainWindow(QMainWindow):
     media_state = "inactive"
     media_duration = 0
     media_position = 0
+    checkpoints = {}
 
     def __init__(self):
         super().__init__()
@@ -83,18 +85,22 @@ class MainWindow(QMainWindow):
         self.checkpoint1_set_button.setFixedSize(self.checkpoint_button_size)
         self.checkpoint1_ld_button = QPushButton("L1")
         self.checkpoint1_ld_button.setFixedSize(self.checkpoint_button_size)
+        self.checkpoint1_ld_button.setDisabled(True)
         self.checkpoint2_set_button = QPushButton("S2")
         self.checkpoint2_set_button.setFixedSize(self.checkpoint_button_size)
         self.checkpoint2_ld_button = QPushButton("L2")
         self.checkpoint2_ld_button.setFixedSize(self.checkpoint_button_size)
+        self.checkpoint2_ld_button.setDisabled(True)
         self.checkpoint3_set_button = QPushButton("S3")
         self.checkpoint3_set_button.setFixedSize(self.checkpoint_button_size)
         self.checkpoint3_ld_button = QPushButton("L3")
         self.checkpoint3_ld_button.setFixedSize(self.checkpoint_button_size)
+        self.checkpoint3_ld_button.setDisabled(True)
         self.checkpoint4_set_button = QPushButton("S4")
         self.checkpoint4_set_button.setFixedSize(self.checkpoint_button_size)
         self.checkpoint4_ld_button = QPushButton("L4")
         self.checkpoint4_ld_button.setFixedSize(self.checkpoint_button_size)
+        self.checkpoint4_ld_button.setDisabled(True)
 
         self.media_button_size = QSize(40, 40)
         self.media_ctrl_ld_back = QPushButton(QIcon.fromTheme("media-skip-backward"), "")
@@ -107,6 +113,31 @@ class MainWindow(QMainWindow):
         self.media_ctrl_fwd.setFixedSize(self.media_button_size)
         self.media_ctrl_ld_fwd = QPushButton(QIcon.fromTheme("media-skip-forward"), "")
         self.media_ctrl_ld_fwd.setFixedSize(self.media_button_size)
+
+        self.speed_label = QLabel("Playback speed ")
+        self.min_speed_label = QLabel("x0")
+        self.max_speed_label = QLabel("x2")
+        self.speed_ctrl_slider = QSlider(Qt.Orientation.Horizontal)
+        
+        speed_ctrl_button_size = QSize(40, 25)
+        self.speed_ctrl_button_p5 = QPushButton("x0.5")
+        self.speed_ctrl_button_p75 = QPushButton("x0.75")
+        self.speed_ctrl_button_p8 = QPushButton("x0.8")
+        self.speed_ctrl_button_p9 = QPushButton("x0.9")
+        self.speed_ctrl_button_1 = QPushButton("x1")
+        self.speed_ctrl_button_1p1 = QPushButton("x1.1")
+        self.speed_ctrl_button_1p2 = QPushButton("x1.2")
+        self.speed_ctrl_button_1p3 = QPushButton("x1.3")
+        self.speed_ctrl_button_1p5 = QPushButton("x1.5")
+        self.speed_ctrl_button_p5.setFixedSize(speed_ctrl_button_size)
+        self.speed_ctrl_button_p75.setFixedSize(speed_ctrl_button_size)
+        self.speed_ctrl_button_p8.setFixedSize(speed_ctrl_button_size)
+        self.speed_ctrl_button_p9.setFixedSize(speed_ctrl_button_size)
+        self.speed_ctrl_button_1.setFixedSize(speed_ctrl_button_size)
+        self.speed_ctrl_button_1p1.setFixedSize(speed_ctrl_button_size)
+        self.speed_ctrl_button_1p2.setFixedSize(speed_ctrl_button_size)
+        self.speed_ctrl_button_1p3.setFixedSize(speed_ctrl_button_size)
+        self.speed_ctrl_button_1p5.setFixedSize(speed_ctrl_button_size)
 
         palette = self.palette()
         self.mixer_drum = MixerWidget(labelText="Drum")
@@ -165,6 +196,22 @@ class MainWindow(QMainWindow):
         self.media_ctrl_section.addWidget(self.media_ctrl_fwd)
         self.media_ctrl_section.addWidget(self.media_ctrl_ld_fwd)
 
+        self.speed_ctrl_section.addLayout(self.speed_fine_section)
+        self.speed_ctrl_section.addLayout(self.speed_coarse_section)
+        self.speed_fine_section.addWidget(self.speed_label)
+        self.speed_fine_section.addWidget(self.min_speed_label)
+        self.speed_fine_section.addWidget(self.speed_ctrl_slider)
+        self.speed_fine_section.addWidget(self.max_speed_label)
+        self.speed_coarse_section.addWidget(self.speed_ctrl_button_p5)
+        self.speed_coarse_section.addWidget(self.speed_ctrl_button_p75)
+        self.speed_coarse_section.addWidget(self.speed_ctrl_button_p8)
+        self.speed_coarse_section.addWidget(self.speed_ctrl_button_p9)
+        self.speed_coarse_section.addWidget(self.speed_ctrl_button_1)
+        self.speed_coarse_section.addWidget(self.speed_ctrl_button_1p1)
+        self.speed_coarse_section.addWidget(self.speed_ctrl_button_1p2)
+        self.speed_coarse_section.addWidget(self.speed_ctrl_button_1p3)
+        self.speed_coarse_section.addWidget(self.speed_ctrl_button_1p5)
+
         self.mixer_section.addWidget(self.mixer_drum)
         self.mixer_section.addWidget(self.mixer_bass)
         self.mixer_section.addWidget(self.mixer_vocal)
@@ -189,11 +236,123 @@ class MainWindow(QMainWindow):
         self.audio_output.setVolume(100)
 
         self.mixer_master.volumeChanged.connect(self.volume_changed)
+        self.mixer_master.trackMuted.connect(self.track_muted)
+
         self.media_ctrl_play_pause.clicked.connect(self.play_pause)
+        self.media_ctrl_back.clicked.connect(self.skip_backward)
+        self.media_ctrl_fwd.clicked.connect(self.skip_forward)
+
         self.player.durationChanged.connect(self.update_duration)
         self.player.positionChanged.connect(self.update_current_position)
         self.player.playbackStateChanged.connect(self.update_playback_state)
+
         self.tracker.sliderMoved.connect(self.change_position)
+
+        # Speed control functionality
+        self.speed_ctrl_slider.setValue(50)
+        self.speed_ctrl_slider.valueChanged.connect(self.update_playback_speed)
+        self.speed_ctrl_button_p5.clicked.connect(lambda: self.set_playback_speed(0.5))
+        self.speed_ctrl_button_p75.clicked.connect(lambda: self.set_playback_speed(0.75))
+        self.speed_ctrl_button_p8.clicked.connect(lambda: self.set_playback_speed(0.8))
+        self.speed_ctrl_button_p9.clicked.connect(lambda: self.set_playback_speed(0.9))
+        self.speed_ctrl_button_1.clicked.connect(lambda: self.set_playback_speed(1))
+        self.speed_ctrl_button_1p1.clicked.connect(lambda: self.set_playback_speed(1.1))
+        self.speed_ctrl_button_1p2.clicked.connect(lambda: self.set_playback_speed(1.2))
+        self.speed_ctrl_button_1p3.clicked.connect(lambda: self.set_playback_speed(1.3))
+        self.speed_ctrl_button_1p5.clicked.connect(lambda: self.set_playback_speed(1.5))
+
+        # Checkpoint functionality
+        self.checkpoint1_set_button.clicked.connect(lambda: self.set_checkpoint(0, self.player.position()))
+        self.checkpoint2_set_button.clicked.connect(lambda: self.set_checkpoint(1, self.player.position()))
+        self.checkpoint3_set_button.clicked.connect(lambda: self.set_checkpoint(2, self.player.position()))
+        self.checkpoint4_set_button.clicked.connect(lambda: self.set_checkpoint(3, self.player.position()))
+
+        self.checkpoint1_ld_button.clicked.connect(lambda: self.load_checkpoint(0))
+        self.checkpoint2_ld_button.clicked.connect(lambda: self.load_checkpoint(1))
+        self.checkpoint3_ld_button.clicked.connect(lambda: self.load_checkpoint(2))
+        self.checkpoint4_ld_button.clicked.connect(lambda: self.load_checkpoint(3))
+
+        self.media_ctrl_ld_back.clicked.connect(self.load_previous_checkpoint)
+        self.media_ctrl_ld_fwd.clicked.connect(self.load_next_checkpoint)
+
+    def load_previous_checkpoint(self):
+        current_pos = self.player.position()
+        min_diff = math.inf
+        prev_checkpoint = None
+
+        for checkpoint in self.checkpoints.values():
+            if checkpoint >= current_pos:
+                continue
+            if (current_pos - checkpoint) < min_diff:
+                min_diff = (current_pos - checkpoint)
+                prev_checkpoint = checkpoint
+
+        if prev_checkpoint is not None:
+            self.player.setPosition(prev_checkpoint)
+        else:
+            self.player.setPosition(0)
+
+    def load_next_checkpoint(self):
+        current_pos = self.player.position()
+        min_diff = math.inf
+        next_checkpoint = None
+
+        for checkpoint in self.checkpoints.values():
+            if checkpoint <= current_pos:
+                continue
+            if (checkpoint - current_pos) < min_diff:
+                min_diff = (checkpoint - current_pos)
+                next_checkpoint = checkpoint
+        
+        if next_checkpoint is not None:
+            self.player.setPosition(next_checkpoint)
+        else:
+            self.player.setPosition(self.media_duration)
+
+    def load_checkpoint(self, index):
+        if self.checkpoints[index] is not None:
+            self.player.setPosition(self.checkpoints[index])
+
+    def set_checkpoint(self, index, position):
+        self.checkpoints[index] = position
+        match index:
+            case 0:
+                self.checkpoint1_ld_button.setEnabled(True)
+            case 1:
+                self.checkpoint2_ld_button.setEnabled(True)
+            case 2:
+                self.checkpoint3_ld_button.setEnabled(True)
+            case 3:
+                self.checkpoint4_ld_button.setEnabled(True)
+
+    def set_playback_speed(self, speed):
+        self.speed_ctrl_slider.setValue(self._interpolate_slider_value(speed))
+
+    def update_playback_speed(self):
+        slider_value = self.speed_ctrl_slider.value()
+        speed = self._interpolate_playback_speed(slider_value)
+
+        self.player.setPlaybackRate(speed)
+
+    def skip_forward(self):
+        new_position = self.player.position() + 5000
+        if new_position >= self.media_duration:
+            self.player.setPosition(self.media_duration)
+        else:
+            self.player.setPosition(new_position)
+
+    def skip_backward(self):
+        new_position = self.player.position() - 5000
+        if new_position <= 0:
+            self.player.setPosition(0)
+        else:
+            self.player.setPosition(new_position)
+
+    def track_muted(self, muted, track):
+        if muted == True:
+            self.audio_output.setVolume(0)
+        else:
+            self.audio_output.setVolume(self.mixer_master.value() / 100)
 
     def update_playback_state(self, state):
         if state == QMediaPlayer.PlaybackState.PlayingState:
@@ -220,7 +379,8 @@ class MainWindow(QMainWindow):
         self.tracker_current_label.setText(self._ms_to_timestamp(position))
     
     def volume_changed(self, value):
-        self.audio_output.setVolume(value / 100)
+        if not self.mixer_master.muted:
+            self.audio_output.setVolume(value / 100)
 
     def play_pause(self):
         if self.media_state == "inactive":
@@ -249,7 +409,29 @@ class MainWindow(QMainWindow):
         self.media_ctrl_play_pause.setIcon(QIcon.fromTheme("media-pause"))
         self.player.setPosition(0)
         self.player.play()
+
+    @staticmethod
+    def _interpolate_playback_speed(slider_value):
+        if slider_value == 50:
+            speed = 1
+        if slider_value < 50:
+            speed = slider_value / 49
+        if slider_value > 50:
+            speed = (slider_value - 51) / (99 - 51) * (2 - 1) + 1
+        
+        return speed
     
+    @staticmethod
+    def _interpolate_slider_value(playback_speed):
+        if playback_speed == 1:
+            slider_value = 50
+        if playback_speed < 1:
+            slider_value = playback_speed * 49  # Scale from 0-49
+        if playback_speed > 1:
+            slider_value = (playback_speed - 1) / (2 - 1) * (99 - 51) + 51
+
+        return int(slider_value)
+        
     @staticmethod
     def _ms_to_timestamp(ms):
         minutes = ms // 60000

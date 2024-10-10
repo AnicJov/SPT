@@ -55,6 +55,9 @@ class _Bar(QtWidgets.QWidget):
 
         for n in range(n_steps_to_draw):
             brush.setColor(QtGui.QColor(self.steps[n]))
+            if self.parent().muted:
+                brush.setColor(QtGui.QColor("#45475a"))
+
             rect = QtCore.QRect(
                 padding,
                 padding + d_height - ((n + 1) * step_size) + bar_spacer,
@@ -99,6 +102,12 @@ class MixerWidget(QtWidgets.QWidget):
     
     colorChanged = QtCore.pyqtSignal()
     volumeChanged = QtCore.pyqtSignal(int)
+    trackMuted = QtCore.pyqtSignal((bool, str))
+    trackSoloed = QtCore.pyqtSignal((bool, str))
+
+    label = "volume"
+    muted = False
+    soloed = False
 
     def __init__(self, labelText="volume", steps=10, *args, **kwargs):
         super(MixerWidget, self).__init__(*args, **kwargs)
@@ -115,12 +124,12 @@ class MixerWidget(QtWidgets.QWidget):
 
         buttons_layout = QtWidgets.QHBoxLayout()
 
-        button_mute = QtWidgets.QPushButton("M")
-        button_mute.setFixedSize(QtCore.QSize(20, 20))
-        buttons_layout.addWidget(button_mute)
-        button_solo = QtWidgets.QPushButton("S")
-        button_solo.setFixedSize(QtCore.QSize(20, 20))
-        buttons_layout.addWidget(button_solo)
+        self.button_mute = QtWidgets.QPushButton("M")
+        self.button_mute.setFixedSize(QtCore.QSize(20, 20))
+        buttons_layout.addWidget(self.button_mute)
+        self.button_solo = QtWidgets.QPushButton("S")
+        self.button_solo.setFixedSize(QtCore.QSize(20, 20))
+        buttons_layout.addWidget(self.button_solo)
         layout.addLayout(buttons_layout)
         
         self._dial = QtWidgets.QDial()
@@ -135,6 +144,25 @@ class MixerWidget(QtWidgets.QWidget):
 
         self._bar.clicked_value.connect(self._dial.setValue)
         self._dial.valueChanged.connect(self._value_changed)
+        self.button_mute.pressed.connect(self._toggle_mute)
+        self.button_solo.pressed.connect(self._toggle_solo)
+
+    def _toggle_mute(self):
+        if self.muted == False:
+            self.muted = True
+            self.trackMuted.emit(True, self.label)
+        else:
+            self.muted = False
+            self.trackMuted.emit(False, self.label)
+        self._bar.update()
+
+    def _toggle_solo(self):
+        if self.soloed == False:
+            self.soloed = True
+            self.trackSoloed.emit(True, self.label)
+        else:
+            self.soloed = False
+            self.trackSoloed.emit(False, self.label)
         
     def _value_changed(self, value):
         self.volumeChanged.emit(value)
@@ -144,6 +172,7 @@ class MixerWidget(QtWidgets.QWidget):
 
     def setLabelText(newText):
         self._label.setLabelText(newText)
+        self.label = newText
 
     def setColor(self, color):
         self._bar.steps = [color] * self._bar.n_steps
@@ -167,4 +196,4 @@ class MixerWidget(QtWidgets.QWidget):
         self._bar.update()
     
     def value(self):
-        self._dial.value()
+        return self._dial.value()
