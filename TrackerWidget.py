@@ -75,7 +75,8 @@ class _Tracker(QtWidgets.QWidget):
 class TrackerWidget(QtWidgets.QWidget):
     bg_color = QtGui.QColor.fromString("black")
     fg_color = QtGui.QColor.fromString("white")
-    player = None
+    players = None
+    track_to_graph = -1 # Graph sum if -1
     audio_file_path = None
     n_visual_samples = 200_000
 
@@ -85,14 +86,12 @@ class TrackerWidget(QtWidgets.QWidget):
 
     checkpoints = {}
 
-    # FIXME: Handle visualizing multiple tracks
-
     trackerMoved = QtCore.pyqtSignal(int)
 
-    def __init__(self, player, *args, **kwargs):
+    def __init__(self, players, *args, **kwargs):
         super().__init__(*args, **kwargs)
 
-        self.player = player
+        self.players = players
 
         self.tracker = _Tracker()
 
@@ -144,23 +143,37 @@ class TrackerWidget(QtWidgets.QWidget):
         self._calculate_clicked_value(e)
 
     def update_audio_data(self):
-        wav_obj = wave.open(self.audio_file_path, "rb")
-        sample_rate = wav_obj.getframerate()
-        n_samples = wav_obj.getnframes()
-        t_audio = n_samples/sample_rate
-        n_channels = wav_obj.getnchannels()
-        signal_wave = wav_obj.readframes(n_samples)
-        signal_array = np.frombuffer(signal_wave, dtype=np.int16)
+        n = [self.track_to_graph]
+        if self.track_to_graph == -1:
+            n = range(len(self.players))
 
-        l_channel = signal_array[0::2]
-        r_channel = signal_array[1::2]
-        times = np.linspace(0, n_samples/sample_rate, num=n_samples)
+        self.times = []
+        self.amplitudes_l = []
+        self.amplitudes_r = []
+            
+        for i in n:
+            wav_obj = wave.open(self.players[i].source().path(), "rb")
+            sample_rate = wav_obj.getframerate()
+            n_samples = wav_obj.getnframes()
+            t_audio = n_samples/sample_rate
+            n_channels = wav_obj.getnchannels()
+            signal_wave = wav_obj.readframes(n_samples)
+            signal_array = np.frombuffer(signal_wave, dtype=np.int16)
 
-        indicies = np.linspace(0, len(times) - 1, self.n_visual_samples, dtype=int)
+            l_channel = signal_array[0::2]
+            r_channel = signal_array[1::2]
+            times = np.linspace(0, n_samples/sample_rate, num=n_samples)
 
-        self.times = times[indicies]
-        self.amplitudes_l = l_channel[indicies]
-        self.amplitudes_r = r_channel[indicies]
+            indicies = np.linspace(0, len(times) - 1, self.n_visual_samples, dtype=int)
+
+            if (self.times is None) or (len(self.times) == 0):
+                self.times = times[indicies]
+                self.amplitudes_l = l_channel[indicies]
+                self.amplitudes_r = r_channel[indicies]
+            else:
+                self.times = np.add(self.times, times[indicies])
+                self.amplitudes_l = np.add(self.amplitudes_l, l_channel[indicies])
+                self.amplitudes_r = np.add(self.amplitudes_r, r_channel[indicies])
 
         self.plot_l.setData(self.times, self.amplitudes_l)
         self.plot_r.setData(self.times, self.amplitudes_r)
@@ -168,7 +181,6 @@ class TrackerWidget(QtWidgets.QWidget):
         self.paintEvent(None)
 
     def update_source(self):
-        self.audio_file_path = self.player.source().path()
         self.update_audio_data()
 
     def setBackgroundColor(self, color):

@@ -20,6 +20,7 @@ from PyQt6.QtWidgets import (
     QLayout,
     QGridLayout,
     QFileDialog,
+    QComboBox,
 )
 
 import demucs.separate
@@ -82,6 +83,8 @@ class MainWindow(QMainWindow):
         self.song_select_label = QLabel("No song selected")
         self.song_select_label.setFont(QFont("sans-serif", italic=True))
 
+        self.soundwave_select = QComboBox()
+        self.soundwave_select.addItems(["All", "Drums", "Bass", "Vocals", "Other"])
 
         self.pos_ctrl_section.addLayout(self.checkpoint_section)
         self.pos_ctrl_section.addLayout(self.media_ctrl_section)
@@ -162,6 +165,9 @@ class MainWindow(QMainWindow):
         # Widget placement
         self.song_select_section.addWidget(self.song_select_button)
         self.song_select_section.addWidget(self.song_select_label)
+
+        self.song_select_section.addSpacerItem(QSpacerItem(10, 10, QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Minimum))
+        self.song_select_section.addWidget(self.soundwave_select)
 
         for i, buttons in enumerate(self.checkpoint_buttons):
             self.checkpoint_section.addWidget(buttons[0], 0, i)
@@ -259,7 +265,7 @@ class MainWindow(QMainWindow):
         self.media_ctrl_ld_fwd.clicked.connect(self.load_next_checkpoint)
 
         # Tracker functionality
-        self.tracker = TrackerWidget(self.player_other)
+        self.tracker = TrackerWidget([self.player_drums, self.player_bass, self.player_vocals, self.player_other])
         self.tracker.setBackgroundColor(self.palette().base().color())
         self.tracker.setForegroundColor(self.palette().highlight().color())
         self.tracker.setFixedHeight(100)
@@ -278,6 +284,15 @@ class MainWindow(QMainWindow):
         self.tracker_labels_section.addSpacerItem(self.tracker_label_spacer)
         self.tracker_labels_section.addWidget(self.tracker_duration_label)
 
+        self.soundwave_select.activated.connect(self.change_wavefrom_display)
+
+    def change_wavefrom_display(self, index):
+        if index == 0:
+            self.tracker.track_to_graph = -1
+        else:
+            self.tracker.track_to_graph = index - 1
+        
+        self.tracker.update_audio_data()
 
     def open_file(self):
         file_name = QFileDialog.getOpenFileName(self, caption="Open Audio File", filter="Audio Files (*.mp3 *.wav *.ogg *.opus *.m4a)")
