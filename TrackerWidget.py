@@ -89,6 +89,7 @@ class _Tracker(QtWidgets.QWidget):
 
 
 class TrackerWidget(QtWidgets.QWidget):
+    # FIXME: Clean up private/public fields
     bg_color = QtGui.QColor.fromString("black")
     fg_color = QtGui.QColor.fromString("white")
     players = None

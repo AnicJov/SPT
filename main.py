@@ -42,11 +42,12 @@ class MainWindow(QMainWindow):
     master_track_volume = 1
 
     checkpoints = {}
-    checkpoint_colors = ["#a6e3a1", "#89b4fa", "#f9e2af", "#f5c2e7"]
+    checkpoint_colors = ["#a6e3a1", "#89b4fa", "#f9e2af", "#f5c2e7", "#fab387", "#94e2d5"]
     loop = None
 
     def __init__(self):
         super().__init__()
+        # FIXME: Split this huge constructor into smaller functions
 
         # General settings
         self.setWindowTitle(self.window_title)
@@ -90,10 +91,10 @@ class MainWindow(QMainWindow):
         self.pos_ctrl_section.addLayout(self.checkpoint_section)
         self.pos_ctrl_section.addLayout(self.media_ctrl_section)
 
-        self.num_checkpoints = 4
+        self.num_checkpoints = 6
         self.checkpoint_buttons = []
         checkpoint_button_size = QSize(30, 30)
-        checkpoint_shortcuts = [("1", "Q"), ("2", "W"), ("3", "E"), ("4", "R")]
+        checkpoint_shortcuts = [("1", "Q"), ("2", "W"), ("3", "E"), ("4", "R"), ("5", "T"), ("6", "Y")]
         for i in range(self.num_checkpoints):
             checkpoint_set = ColorButton(f"S{i+1}")
             checkpoint_set.setFixedSize(checkpoint_button_size)
@@ -112,9 +113,11 @@ class MainWindow(QMainWindow):
         # FIXME: Add actions for keyboard shortcuts so they can have multiple keys for one action
         # FIXME: Add media button controls
         self.media_button_size = QSize(40, 40)
-        self.media_ctrl_loop = QPushButton(QIcon.fromTheme("view-refresh"), "")
+        self.media_ctrl_loop = ColorButton(QIcon.fromTheme("view-refresh"), "")
         self.media_ctrl_loop.setFixedSize(self.media_button_size)
         self.media_ctrl_loop.setToolTip("Loop current section")
+        self.media_ctrl_loop.setHighlightColor(QColor.fromString("#f2cdcd"))
+        self.media_ctrl_loop.setHighlighted(False)
         self.media_ctrl_loop.setShortcut(QKeySequence.fromString("G"))
         self.media_ctrl_ld_back = QPushButton(QIcon.fromTheme("media-skip-backward"), "")
         self.media_ctrl_ld_back.setFixedSize(self.media_button_size)
@@ -140,7 +143,7 @@ class MainWindow(QMainWindow):
         self.speed_ctrl_buttons = []
         speed_ctrl_button_size = QSize(40, 25)
         predefined_speeds = [0.5, 0.75, 0.8, 0.9, 1, 1.1, 1.2, 1.3, 1.5]
-        predefined_speeds_shortcuts = ["6", "7", "8", "9", "0", "-", "=", None, None]
+        predefined_speeds_shortcuts = [None, "7", "8", "9", "0", "-", "=", None, None]
         for i, speed in enumerate(predefined_speeds):
             button = QPushButton(f"x{speed}")
             button.setFixedSize(speed_ctrl_button_size)
@@ -230,6 +233,8 @@ class MainWindow(QMainWindow):
         self.song_select_button.clicked.connect(self.open_file)
         
         # Audio functionality
+        # FIXME: These should probably be objects that have a player, audio output,
+        #        and mixer track and go into an array
         self.player_drums = QMediaPlayer()
         self.player_bass = QMediaPlayer()
         self.player_vocals = QMediaPlayer()
@@ -250,6 +255,7 @@ class MainWindow(QMainWindow):
         self.audio_output_vocals.setVolume(100)
         self.audio_output_other.setVolume(100)
 
+        # FIXME: Add track soloing functionality
         self.mixer_drums.volumeChanged.connect(self.volume_changed)
         self.mixer_drums.trackMuted.connect(self.track_muted)
         # self.mixer_drums.trackSoloed.connect(self.track_soloed)
@@ -311,10 +317,12 @@ class MainWindow(QMainWindow):
         self.soundwave_select.activated.connect(self.change_wavefrom_display)
 
     def update_source(self):
+        # FIXME: This function probably shouldn't handle all of this functionality
         self.loop = None
         self.tracker.removeLoop()
         self.checkpoints = {}
         self.tracker.removeCheckpoints()
+        self.media_ctrl_loop.setHighlighted(False)
         for button in self.checkpoint_buttons:
             button[1].setEnabled(False)
             button[1].setHighlighted(False)
@@ -324,6 +332,7 @@ class MainWindow(QMainWindow):
         if self.loop is not None:
             self.loop = None
             self.tracker.removeLoop()
+            self.media_ctrl_loop.setHighlighted(False)
             return
 
         prev_checkpoint = self.get_previous_checkpoint(250)
@@ -332,15 +341,12 @@ class MainWindow(QMainWindow):
         loop_start = prev_checkpoint if prev_checkpoint is not None else 0
         loop_end = next_checkpoint if next_checkpoint is not None else self.media_duration
         
+        self.media_ctrl_loop.setHighlighted(True)
         self.loop = (loop_start, loop_end)
         self.tracker.setLoop(self.loop)
 
     def change_wavefrom_display(self, index):
-        if index == 0:
-            self.tracker.track_to_graph = -1
-        else:
-            self.tracker.track_to_graph = index - 1
-        
+        self.tracker.track_to_graph = index - 1
         self.tracker.update_audio_data()
 
     def open_file(self):
@@ -351,13 +357,18 @@ class MainWindow(QMainWindow):
             return
 
         if len(file_name[0]) < 30:
-            self.song_select_label.setText(file_name[0])
+            readable_filename = file_name[0]
         else:
-            self.song_select_label.setText(path.basename(file_name[0]))
+            readable_filename = path.basename(file_name[0])
+
+        self.song_select_label.setText(readable_filename)
 
         self.media_filename = file_name[0]
     
         self.song_select_label.setFont(QFont("sans-serif", False))
+
+        new_window_title = f"{self.window_title} - {path.splitext(readable_filename)[0]}"
+        self.setWindowTitle(new_window_title)
 
         # Separate audio
         # FIXME: Don't do this here, use a worker
@@ -464,31 +475,28 @@ class MainWindow(QMainWindow):
 
     def skip_forward(self):
         new_position = self.player_other.position() + 5000
+
         if new_position >= self.media_duration:
-            self.player_drums.setPosition(self.media_duration)
-            self.player_bass.setPosition(self.media_duration)
-            self.player_vocals.setPosition(self.media_duration)
-            self.player_other.setPosition(self.media_duration)
-        else:
-            self.player_drums.setPosition(new_position)
-            self.player_bass.setPosition(new_position)
-            self.player_vocals.setPosition(new_position)
-            self.player_other.setPosition(new_position)
+            new_position = self.media_duration
+        
+        self.player_drums.setPosition(new_position)
+        self.player_bass.setPosition(new_position)
+        self.player_vocals.setPosition(new_position)
+        self.player_other.setPosition(new_position)
 
     def skip_backward(self):
         new_position = self.player_other.position() - 5000
+
         if new_position <= 0:
-            self.player_drums.setPosition(0)
-            self.player_bass.setPosition(0)
-            self.player_vocals.setPosition(0)
-            self.player_other.setPosition(0)
-        else:
-            self.player_drums.setPosition(new_position)
-            self.player_bass.setPosition(new_position)
-            self.player_vocals.setPosition(new_position)
-            self.player_other.setPosition(new_position)
+            new_position = 0
+
+        self.player_drums.setPosition(new_position)
+        self.player_bass.setPosition(new_position)
+        self.player_vocals.setPosition(new_position)
+        self.player_other.setPosition(new_position)
 
     def track_muted(self, muted, track):
+        # FIXME: Use audio_output.setMuted for mute
         match track:
             case "Drums":
                 if muted == True:
@@ -549,15 +557,16 @@ class MainWindow(QMainWindow):
 
     def check_for_loop(self, new_position, threshold):
         """
-        threshold: Range of milliseconds to still count as a loop
+        threshold: Range of milliseconds to still count as a loop (half threshold before, and double after the loop point)
         """
         if self.loop is None:
             return
 
-        if new_position in range(self.loop[1] - threshold // 2, self.loop[1] + threshold // 2):
+        if new_position in range(self.loop[1] - threshold // 2, self.loop[1] + threshold * 2):
             self.change_position(self.loop[0])
     
     def volume_changed(self, value, track):
+        # FIXME: Use audio_output.setMuted for mute
         match track:
             case "Drums":
                 if not self.mixer_drums.muted:
@@ -651,29 +660,6 @@ class MainWindow(QMainWindow):
         seconds = (ms % 60000) // 1000
         millies = ms % 1000
         return f"{minutes:02d}:{seconds:02d}.{millies:02d}"
-    
-    @staticmethod
-    def _ms_to_percentage(current, duration):
-        start_time = 0
-
-        if duration == start_time:
-            return 100 
-        if current >= duration:
-            return 100
-
-        elapsed_time = current - start_time
-        total_time = duration - start_time
-        percentage = (elapsed_time / total_time) * 100
-
-        return percentage
-
-    @staticmethod
-    def _percentage_to_ms(percentage, duration):
-        start_time = 0
-        result_time = start_time + (percentage / 100) * duration
-
-        return result_time
-
 
 
 def main():

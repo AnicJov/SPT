@@ -12,8 +12,8 @@ class ColorButton(QtWidgets.QPushButton):
 
     _highlighted = True
 
-    def __init__(self, label_text, *args, **kwargs):
-        super().__init__(label_text, *args, **kwargs)
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
 
     def paintEvent(self, e):
         super().paintEvent(e)
@@ -38,6 +38,7 @@ class ColorButton(QtWidgets.QPushButton):
         padding = self._highlight_padding
         radius = self._highlight_radius
 
+        # FIXME: This rect draws very weirdly
         path = QtGui.QPainterPath()
         path.addRoundedRect(padding, padding, width - padding * 2, height - padding * 2, radius, radius)
         painter.setPen(pen)
