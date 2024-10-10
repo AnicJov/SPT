@@ -25,6 +25,7 @@ from PyQt6.QtWidgets import (
 import demucs.separate
 
 from MixerWidget import MixerWidget
+from TrackerWidget import TrackerWidget
 
 
 class MainWindow(QMainWindow):
@@ -82,6 +83,7 @@ class MainWindow(QMainWindow):
         self.tracker = QSlider()
         self.tracker.setOrientation(Qt.Orientation.Horizontal)
         self.tracker.setFixedHeight(50)
+
 
         self.tracker_current_label = QLabel("00:00.00")
         self.tracker_label_spacer = QSpacerItem(10, 10, QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Minimum)
@@ -311,6 +313,14 @@ class MainWindow(QMainWindow):
 
         self.media_ctrl_ld_back.clicked.connect(self.load_previous_checkpoint)
         self.media_ctrl_ld_fwd.clicked.connect(self.load_next_checkpoint)
+
+        # Tracker functionality
+        self.new_tracker = TrackerWidget(self.player_other)
+        self.new_tracker.setBackgroundColor(self.palette().base().color())
+        self.new_tracker.setForegroundColor(self.palette().highlight().color())
+
+        self.player_other.sourceChanged.connect(self.new_tracker.update_source)
+        self.tracker_section.addWidget(self.new_tracker)
 
     def open_file(self):
         file_name = QFileDialog.getOpenFileName(self, caption="Open Audio File", filter="Audio Files (*.mp3 *.wav *.ogg *.opus *.m4a)")

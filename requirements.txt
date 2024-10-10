@@ -1,2 +1,5 @@
 PyQt6
+pyqtgraph
+wave
+numpy
 demucs
