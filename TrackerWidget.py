@@ -26,7 +26,7 @@ class _Tracker(QtWidgets.QWidget):
         if loop is not None:
             brush = QtGui.QBrush()
             color = QtGui.QColor.fromString("#f2cdcd")
-            color.setAlpha(30)
+            color.setAlpha(40)
             brush.setColor(color)
             brush.setStyle(Qt.BrushStyle.SolidPattern)
 

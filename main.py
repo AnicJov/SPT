@@ -4,7 +4,7 @@ import math
 from datetime import datetime
 
 from PyQt6.QtCore import Qt, QSize, QUrl
-from PyQt6.QtGui import QIcon, QPalette, QColor, QFont
+from PyQt6.QtGui import QIcon, QPalette, QColor, QFont, QKeySequence
 from PyQt6.QtMultimedia import QAudioOutput, QMediaPlayer
 from PyQt6.QtWidgets import (
     QApplication,
@@ -93,33 +93,44 @@ class MainWindow(QMainWindow):
         self.num_checkpoints = 4
         self.checkpoint_buttons = []
         checkpoint_button_size = QSize(30, 30)
+        checkpoint_shortcuts = [("1", "Q"), ("2", "W"), ("3", "E"), ("4", "R")]
         for i in range(self.num_checkpoints):
             checkpoint_set = ColorButton(f"S{i+1}")
             checkpoint_set.setFixedSize(checkpoint_button_size)
             checkpoint_set.setHighlightColor(self.checkpoint_colors[i % len(self.checkpoint_colors)])
+            checkpoint_set.setShortcut(QKeySequence.fromString(checkpoint_shortcuts[i][0]))
 
             checkpoint_load = ColorButton(f"L{i+1}")
             checkpoint_load.setFixedSize(checkpoint_button_size)
             checkpoint_load.setHighlightColor(self.checkpoint_colors[i % len(self.checkpoint_colors)])
             checkpoint_load.setHighlighted(False)
             checkpoint_load.setDisabled(True)
+            checkpoint_load.setShortcut(QKeySequence.fromString(checkpoint_shortcuts[i][1]))
 
             self.checkpoint_buttons.append((checkpoint_set, checkpoint_load))
 
+        # FIXME: Add actions for keyboard shortcuts so they can have multiple keys for one action
+        # FIXME: Add media button controls
         self.media_button_size = QSize(40, 40)
         self.media_ctrl_loop = QPushButton(QIcon.fromTheme("view-refresh"), "")
         self.media_ctrl_loop.setFixedSize(self.media_button_size)
         self.media_ctrl_loop.setToolTip("Loop current section")
+        self.media_ctrl_loop.setShortcut(QKeySequence.fromString("G"))
         self.media_ctrl_ld_back = QPushButton(QIcon.fromTheme("media-skip-backward"), "")
         self.media_ctrl_ld_back.setFixedSize(self.media_button_size)
+        self.media_ctrl_ld_back.setShortcut(QKeySequence.fromString("H"))
         self.media_ctrl_back = QPushButton(QIcon.fromTheme("media-seek-backward"), "")
         self.media_ctrl_back.setFixedSize(self.media_button_size)
+        self.media_ctrl_back.setShortcut(QKeySequence.fromString("J"))
         self.media_ctrl_play_pause = QPushButton(QIcon.fromTheme("media-play"), "")
         self.media_ctrl_play_pause.setFixedSize(self.media_button_size)
+        self.media_ctrl_play_pause.setShortcut(QKeySequence.fromString("K"))
         self.media_ctrl_fwd = QPushButton(QIcon.fromTheme("media-seek-forward"), "")
         self.media_ctrl_fwd.setFixedSize(self.media_button_size)
+        self.media_ctrl_fwd.setShortcut(QKeySequence.fromString("L"))
         self.media_ctrl_ld_fwd = QPushButton(QIcon.fromTheme("media-skip-forward"), "")
         self.media_ctrl_ld_fwd.setFixedSize(self.media_button_size)
+        self.media_ctrl_ld_fwd.setShortcut(QKeySequence.fromString(";"))
 
         self.speed_label = QLabel("Playback speed ")
         self.min_speed_label = QLabel("x0")
@@ -129,24 +140,31 @@ class MainWindow(QMainWindow):
         self.speed_ctrl_buttons = []
         speed_ctrl_button_size = QSize(40, 25)
         predefined_speeds = [0.5, 0.75, 0.8, 0.9, 1, 1.1, 1.2, 1.3, 1.5]
-        for speed in predefined_speeds:
+        predefined_speeds_shortcuts = ["6", "7", "8", "9", "0", "-", "=", None, None]
+        for i, speed in enumerate(predefined_speeds):
             button = QPushButton(f"x{speed}")
             button.setFixedSize(speed_ctrl_button_size)
+            if predefined_speeds_shortcuts[i] is not None:
+                button.setShortcut(QKeySequence.fromString(predefined_speeds_shortcuts[i]))
             self.speed_ctrl_buttons.append((button, speed))
 
         palette = self.palette()
         self.mixer_drums = MixerWidget(labelText="Drums")
         self.mixer_drums.setBackgroundColor(palette.base().color())
         self.mixer_drums.setColor(palette.highlight().color())
+        self.mixer_drums.setMuteShortcut(QKeySequence.fromString("M"))
         self.mixer_bass = MixerWidget(labelText="Bass")
         self.mixer_bass.setBackgroundColor(palette.base().color())
         self.mixer_bass.setColor(palette.highlight().color())
+        self.mixer_bass.setMuteShortcut(QKeySequence.fromString(","))
         self.mixer_vocals = MixerWidget(labelText="Vocals")
         self.mixer_vocals.setBackgroundColor(palette.base().color())
         self.mixer_vocals.setColor(palette.highlight().color())
+        self.mixer_vocals.setMuteShortcut(QKeySequence.fromString("."))
         self.mixer_other = MixerWidget(labelText="Other")
         self.mixer_other.setBackgroundColor(palette.base().color())
         self.mixer_other.setColor(palette.highlight().color())
+        self.mixer_other.setMuteShortcut(QKeySequence.fromString("/"))
         self.mixer_master = MixerWidget(labelText="Master")
         self.mixer_master.setBackgroundColor(palette.base().color())
         self.mixer_master.setColor(palette.highlight().color())
@@ -524,7 +542,7 @@ class MainWindow(QMainWindow):
 
     def update_current_position(self, position):
         # FIXME: This probably loops even when scrubbing the tracker
-        self.check_for_loop(position, 25)
+        self.check_for_loop(position, 50)
         self.media_position = position
         self.tracker.setTrackerPosition(self.media_position)
         self.tracker_current_label.setText(self._ms_to_timestamp(position))

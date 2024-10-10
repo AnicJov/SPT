@@ -209,3 +209,9 @@ class MixerWidget(QtWidgets.QWidget):
     
     def value(self):
         return self._dial.value()
+
+    def setMuteShortcut(self, shortcut):
+        self.button_mute.setShortcut(shortcut)
+
+    def setSoloShortcut(self, shortcut):
+        self.button_solo.setShortcut(shortcut)
