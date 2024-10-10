@@ -4,7 +4,7 @@
 # SPT - Song Practice Tool
 This is a cross-platform tool that aims to help musicians practice songs with features that make repeating sections easy and playing along fun.
 
-Written in Python and PyQt6, using demucs for instrument separation.
+Written in Python and PyQt6, using [demucs](https://github.com/facebookresearch/demucs) for instrument separation.
 
 ### (Planned) Features:
 - Music player functions

@@ -101,7 +101,7 @@ class MixerWidget(QtWidgets.QWidget):
     """
     
     colorChanged = QtCore.pyqtSignal()
-    volumeChanged = QtCore.pyqtSignal(int)
+    volumeChanged = QtCore.pyqtSignal((int, str))
     trackMuted = QtCore.pyqtSignal((bool, str))
     trackSoloed = QtCore.pyqtSignal((bool, str))
 
@@ -111,6 +111,8 @@ class MixerWidget(QtWidgets.QWidget):
 
     def __init__(self, labelText="volume", steps=10, *args, **kwargs):
         super(MixerWidget, self).__init__(*args, **kwargs)
+
+        self.label = labelText
 
         layout = QtWidgets.QVBoxLayout()
 
@@ -165,7 +167,7 @@ class MixerWidget(QtWidgets.QWidget):
             self.trackSoloed.emit(False, self.label)
         
     def _value_changed(self, value):
-        self.volumeChanged.emit(value)
+        self.volumeChanged.emit(value, self.label)
 
     def sizeHint(self):
         return QtCore.QSize(60, 300)

@@ -22,15 +22,22 @@ from PyQt6.QtWidgets import (
     QFileDialog,
 )
 
+import demucs.separate
+
 from MixerWidget import MixerWidget
 
 
 class MainWindow(QMainWindow):
     window_title = "SPT - Song Practice Tool"
+
     media_filename = ""
+    media_separated_dir = ""
     media_state = "inactive"
     media_duration = 0
     media_position = 0
+
+    master_track_volume = 1
+
     checkpoints = {}
 
     def __init__(self):
@@ -143,15 +150,15 @@ class MainWindow(QMainWindow):
         self.speed_ctrl_button_1p5.setFixedSize(speed_ctrl_button_size)
 
         palette = self.palette()
-        self.mixer_drum = MixerWidget(labelText="Drum")
-        self.mixer_drum.setBackgroundColor(palette.base().color())
-        self.mixer_drum.setColor(palette.highlight().color())
+        self.mixer_drums = MixerWidget(labelText="Drums")
+        self.mixer_drums.setBackgroundColor(palette.base().color())
+        self.mixer_drums.setColor(palette.highlight().color())
         self.mixer_bass = MixerWidget(labelText="Bass")
         self.mixer_bass.setBackgroundColor(palette.base().color())
         self.mixer_bass.setColor(palette.highlight().color())
-        self.mixer_vocal = MixerWidget(labelText="Vocals")
-        self.mixer_vocal.setBackgroundColor(palette.base().color())
-        self.mixer_vocal.setColor(palette.highlight().color())
+        self.mixer_vocals = MixerWidget(labelText="Vocals")
+        self.mixer_vocals.setBackgroundColor(palette.base().color())
+        self.mixer_vocals.setColor(palette.highlight().color())
         self.mixer_other = MixerWidget(labelText="Other")
         self.mixer_other.setBackgroundColor(palette.base().color())
         self.mixer_other.setColor(palette.highlight().color())
@@ -215,9 +222,9 @@ class MainWindow(QMainWindow):
         self.speed_coarse_section.addWidget(self.speed_ctrl_button_1p3)
         self.speed_coarse_section.addWidget(self.speed_ctrl_button_1p5)
 
-        self.mixer_section.addWidget(self.mixer_drum)
+        self.mixer_section.addWidget(self.mixer_drums)
         self.mixer_section.addWidget(self.mixer_bass)
-        self.mixer_section.addWidget(self.mixer_vocal)
+        self.mixer_section.addWidget(self.mixer_vocals)
         self.mixer_section.addWidget(self.mixer_other)
         self.mixer_section.addWidget(self.mixer_master)
 
@@ -233,12 +240,38 @@ class MainWindow(QMainWindow):
         self.song_select_button.clicked.connect(self.open_file)
         
         # Audio functionality
-        self.player = QMediaPlayer()
-        self.audio_output = QAudioOutput()
-        self.player.setAudioOutput(self.audio_output)
-        # self.player.setSource(QUrl.fromLocalFile(filename))
-        self.audio_output.setVolume(100)
+        self.player_drums = QMediaPlayer()
+        self.player_bass = QMediaPlayer()
+        self.player_vocals = QMediaPlayer()
+        self.player_other = QMediaPlayer()
 
+        self.audio_output_drums = QAudioOutput()
+        self.audio_output_bass = QAudioOutput()
+        self.audio_output_vocals = QAudioOutput()
+        self.audio_output_other = QAudioOutput()
+
+        self.player_drums.setAudioOutput(self.audio_output_drums)
+        self.player_bass.setAudioOutput(self.audio_output_bass)
+        self.player_vocals.setAudioOutput(self.audio_output_vocals)
+        self.player_other.setAudioOutput(self.audio_output_other)
+
+        self.audio_output_drums.setVolume(100)
+        self.audio_output_bass.setVolume(100)
+        self.audio_output_vocals.setVolume(100)
+        self.audio_output_other.setVolume(100)
+
+        self.mixer_drums.volumeChanged.connect(self.volume_changed)
+        self.mixer_drums.trackMuted.connect(self.track_muted)
+        # self.mixer_drums.trackSoloed.connect(self.track_soloed)
+        self.mixer_bass.volumeChanged.connect(self.volume_changed)
+        self.mixer_bass.trackMuted.connect(self.track_muted)
+        # self.mixer_bass.trackSoloed.connect(self.track_soloed)
+        self.mixer_vocals.volumeChanged.connect(self.volume_changed)
+        self.mixer_vocals.trackMuted.connect(self.track_muted)
+        # self.mixer_vocals.trackSoloed.connect(self.track_soloed)
+        self.mixer_other.volumeChanged.connect(self.volume_changed)
+        self.mixer_other.trackMuted.connect(self.track_muted)
+        # self.mixer_other.trackSoloed.connect(self.track_soloed)
         self.mixer_master.volumeChanged.connect(self.volume_changed)
         self.mixer_master.trackMuted.connect(self.track_muted)
 
@@ -246,9 +279,9 @@ class MainWindow(QMainWindow):
         self.media_ctrl_back.clicked.connect(self.skip_backward)
         self.media_ctrl_fwd.clicked.connect(self.skip_forward)
 
-        self.player.durationChanged.connect(self.update_duration)
-        self.player.positionChanged.connect(self.update_current_position)
-        self.player.playbackStateChanged.connect(self.update_playback_state)
+        self.player_other.durationChanged.connect(self.update_duration)
+        self.player_other.positionChanged.connect(self.update_current_position)
+        self.player_other.playbackStateChanged.connect(self.update_playback_state)
 
         self.tracker.sliderMoved.connect(self.change_position)
 
@@ -266,10 +299,10 @@ class MainWindow(QMainWindow):
         self.speed_ctrl_button_1p5.clicked.connect(lambda: self.set_playback_speed(1.5))
 
         # Checkpoint functionality
-        self.checkpoint1_set_button.clicked.connect(lambda: self.set_checkpoint(0, self.player.position()))
-        self.checkpoint2_set_button.clicked.connect(lambda: self.set_checkpoint(1, self.player.position()))
-        self.checkpoint3_set_button.clicked.connect(lambda: self.set_checkpoint(2, self.player.position()))
-        self.checkpoint4_set_button.clicked.connect(lambda: self.set_checkpoint(3, self.player.position()))
+        self.checkpoint1_set_button.clicked.connect(lambda: self.set_checkpoint(0, self.player_other.position()))
+        self.checkpoint2_set_button.clicked.connect(lambda: self.set_checkpoint(1, self.player_other.position()))
+        self.checkpoint3_set_button.clicked.connect(lambda: self.set_checkpoint(2, self.player_other.position()))
+        self.checkpoint4_set_button.clicked.connect(lambda: self.set_checkpoint(3, self.player_other.position()))
 
         self.checkpoint1_ld_button.clicked.connect(lambda: self.load_checkpoint(0))
         self.checkpoint2_ld_button.clicked.connect(lambda: self.load_checkpoint(1))
@@ -290,11 +323,26 @@ class MainWindow(QMainWindow):
             self.song_select_label.setText(file_name[0])
         else:
             self.song_select_label.setText(path.basename(file_name[0]))
+
+        self.media_filename = file_name[0]
+    
         self.song_select_label.setFont(QFont("sans-serif", False))
-        self.player.setSource(QUrl.fromLocalFile(file_name[0]))
+
+        # Separate audio
+        # FIXME: Don't do this here, use a worker
+        model = "htdemucs_ft"
+        self.media_separated_dir = f"separated/{model}/{path.splitext(path.basename(file_name[0]))[0]}/"
+        if not path.exists(self.media_separated_dir):
+            demucs.separate.main(["-n", model, self.media_filename])
+
+        self.player_drums.setSource(QUrl.fromLocalFile(self.media_separated_dir + "drums.wav"))
+        self.player_bass.setSource(QUrl.fromLocalFile(self.media_separated_dir + "bass.wav"))
+        self.player_vocals.setSource(QUrl.fromLocalFile(self.media_separated_dir + "vocals.wav"))
+        self.player_other.setSource(QUrl.fromLocalFile(self.media_separated_dir + "other.wav"))
+
 
     def load_previous_checkpoint(self):
-        current_pos = self.player.position()
+        current_pos = self.player_other.position()
         min_diff = math.inf
         prev_checkpoint = None
 
@@ -306,12 +354,18 @@ class MainWindow(QMainWindow):
                 prev_checkpoint = checkpoint
 
         if prev_checkpoint is not None:
-            self.player.setPosition(prev_checkpoint)
+            self.player_drums.setPosition(prev_checkpoint)
+            self.player_bass.setPosition(prev_checkpoint)
+            self.player_vocals.setPosition(prev_checkpoint)
+            self.player_other.setPosition(prev_checkpoint)
         else:
-            self.player.setPosition(0)
+            self.player_drums.setPosition(0)
+            self.player_bass.setPosition(0)
+            self.player_vocals.setPosition(0)
+            self.player_other.setPosition(0)
 
     def load_next_checkpoint(self):
-        current_pos = self.player.position()
+        current_pos = self.player_other.position()
         min_diff = math.inf
         next_checkpoint = None
 
@@ -323,13 +377,22 @@ class MainWindow(QMainWindow):
                 next_checkpoint = checkpoint
         
         if next_checkpoint is not None:
-            self.player.setPosition(next_checkpoint)
+            self.player_drums.setPosition(next_checkpoint)
+            self.player_bass.setPosition(next_checkpoint)
+            self.player_vocals.setPosition(next_checkpoint)
+            self.player_other.setPosition(next_checkpoint)
         else:
-            self.player.setPosition(self.media_duration)
+            self.player_drums.setPosition(self.media_duration)
+            self.player_bass.setPosition(self.media_duration)
+            self.player_vocals.setPosition(self.media_duration)
+            self.player_other.setPosition(self.media_duration)
 
     def load_checkpoint(self, index):
         if self.checkpoints[index] is not None:
-            self.player.setPosition(self.checkpoints[index])
+            self.player_drums.setPosition(self.checkpoints[index])
+            self.player_bass.setPosition(self.checkpoints[index])
+            self.player_vocals.setPosition(self.checkpoints[index])
+            self.player_other.setPosition(self.checkpoints[index])
 
     def set_checkpoint(self, index, position):
         self.checkpoints[index] = position
@@ -350,27 +413,66 @@ class MainWindow(QMainWindow):
         slider_value = self.speed_ctrl_slider.value()
         speed = self._interpolate_playback_speed(slider_value)
 
-        self.player.setPlaybackRate(speed)
+        self.player_drums.setPlaybackRate(speed)
+        self.player_bass.setPlaybackRate(speed)
+        self.player_vocals.setPlaybackRate(speed)
+        self.player_other.setPlaybackRate(speed)
 
     def skip_forward(self):
-        new_position = self.player.position() + 5000
+        new_position = self.player_other.position() + 5000
         if new_position >= self.media_duration:
-            self.player.setPosition(self.media_duration)
+            self.player_drums.setPosition(self.media_duration)
+            self.player_bass.setPosition(self.media_duration)
+            self.player_vocals.setPosition(self.media_duration)
+            self.player_other.setPosition(self.media_duration)
         else:
-            self.player.setPosition(new_position)
+            self.player_drums.setPosition(new_position)
+            self.player_bass.setPosition(new_position)
+            self.player_vocals.setPosition(new_position)
+            self.player_other.setPosition(new_position)
 
     def skip_backward(self):
-        new_position = self.player.position() - 5000
+        new_position = self.player_other.position() - 5000
         if new_position <= 0:
-            self.player.setPosition(0)
+            self.player_drums.setPosition(0)
+            self.player_bass.setPosition(0)
+            self.player_vocals.setPosition(0)
+            self.player_other.setPosition(0)
         else:
-            self.player.setPosition(new_position)
+            self.player_drums.setPosition(new_position)
+            self.player_bass.setPosition(new_position)
+            self.player_vocals.setPosition(new_position)
+            self.player_other.setPosition(new_position)
 
     def track_muted(self, muted, track):
-        if muted == True:
-            self.audio_output.setVolume(0)
-        else:
-            self.audio_output.setVolume(self.mixer_master.value() / 100)
+        match track:
+            case "Drums":
+                if muted == True:
+                    self.audio_output_drums.setVolume(0)
+                else:
+                    self.audio_output_drums.setVolume(self.mixer_drums.value() / 100 * self.master_track_volume)
+            case "Bass":
+                if muted == True:
+                    self.audio_output_bass.setVolume(0)
+                else:
+                    self.audio_output_bass.setVolume(self.mixer_bass.value() / 100 * self.master_track_volume)
+            case "Vocals":
+                if muted == True:
+                    self.audio_output_vocals.setVolume(0)
+                else:
+                    self.audio_output_vocals.setVolume(self.mixer_vocals.value() / 100 * self.master_track_volume)
+            case "Other":
+                if muted == True:
+                    self.audio_output_other.setVolume(0)
+                else:
+                    self.audio_output_other.setVolume(self.mixer_other.value() / 100 * self.master_track_volume)
+            case "Master":
+                if muted == True:
+                    self.master_track_volume = 0
+                    self.volume_changed(0, "Master")
+                else:
+                    self.master_track_volume = (self.mixer_master.value() / 100)
+                    self.volume_changed(self.mixer_master.value(), "Master")
 
     def update_playback_state(self, state):
         if state == QMediaPlayer.PlaybackState.PlayingState:
@@ -384,7 +486,10 @@ class MainWindow(QMainWindow):
             self.media_ctrl_play_pause.setIcon(QIcon.fromTheme("media-play"))
 
     def change_position(self, value):
-        self.player.setPosition(value)
+        self.player_drums.setPosition(value)
+        self.player_bass.setPosition(value)
+        self.player_vocals.setPosition(value)
+        self.player_other.setPosition(value)
     
     def update_duration(self, duration):
         self.media_duration = duration
@@ -396,9 +501,31 @@ class MainWindow(QMainWindow):
         self.tracker.setSliderPosition(self.media_position)
         self.tracker_current_label.setText(self._ms_to_timestamp(position))
     
-    def volume_changed(self, value):
-        if not self.mixer_master.muted:
-            self.audio_output.setVolume(value / 100)
+    def volume_changed(self, value, track):
+        match track:
+            case "Drums":
+                if not self.mixer_drums.muted:
+                    self.audio_output_drums.setVolume(value / 100 * self.master_track_volume)
+            case "Bass":
+                if not self.mixer_bass.muted:
+                    self.audio_output_bass.setVolume(value / 100 * self.master_track_volume)
+            case "Vocals":
+                if not self.mixer_vocals.muted:
+                    self.audio_output_vocals.setVolume(value / 100 * self.master_track_volume)
+            case "Other":
+                if not self.mixer_other.muted:
+                    self.audio_output_other.setVolume(value / 100 * self.master_track_volume)
+            case "Master":
+                self.master_track_volume = value / 100
+
+        if not self.mixer_drums.muted:
+            self.audio_output_drums.setVolume(self.mixer_drums.value() / 100 * self.master_track_volume)
+        if not self.mixer_bass.muted:
+            self.audio_output_bass.setVolume(self.mixer_bass.value() / 100 * self.master_track_volume)
+        if not self.mixer_vocals.muted:
+            self.audio_output_vocals.setVolume(self.mixer_vocals.value() / 100 * self.master_track_volume)
+        if not self.mixer_other.muted:
+            self.audio_output_other.setVolume(self.mixer_other.value() / 100 * self.master_track_volume)
 
     def play_pause(self):
         if self.media_state == "inactive":
@@ -415,18 +542,30 @@ class MainWindow(QMainWindow):
     def play(self):
         self.media_state = "playing"
         self.media_ctrl_play_pause.setIcon(QIcon.fromTheme("media-pause"))
-        self.player.play()
+        self.player_drums.play()
+        self.player_bass.play()
+        self.player_vocals.play()
+        self.player_other.play()
 
     def pause(self):
         self.media_state = "paused"
         self.media_ctrl_play_pause.setIcon(QIcon.fromTheme("media-play"))
-        self.player.pause()
+        self.player_drums.pause()
+        self.player_bass.pause()
+        self.player_vocals.pause()
+        self.player_other.pause()
 
     def restart(self):
         self.media_state = "playing"
         self.media_ctrl_play_pause.setIcon(QIcon.fromTheme("media-pause"))
-        self.player.setPosition(0)
-        self.player.play()
+        self.player_drums.setPosition(0)
+        self.player_bass.setPosition(0)
+        self.player_vocals.setPosition(0)
+        self.player_other.setPosition(0)
+        self.player_drums.play()
+        self.player_bass.play()
+        self.player_vocals.play()
+        self.player_other.play()
 
     @staticmethod
     def _interpolate_playback_speed(slider_value):
