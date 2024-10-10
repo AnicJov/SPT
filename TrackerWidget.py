@@ -20,6 +20,22 @@ class _Tracker(QtWidgets.QWidget):
 
         bar_width = 2
 
+        # Paint loop
+        loop = self.parent().loop
+
+        if loop is not None:
+            brush = QtGui.QBrush()
+            color = QtGui.QColor.fromString("#f2cdcd")
+            color.setAlpha(30)
+            brush.setColor(color)
+            brush.setStyle(Qt.BrushStyle.SolidPattern)
+
+            loop_visual_start = int(np.interp(loop[0], [_min, _max], [0, _width]))
+            loop_visual_end = int(np.interp(loop[1], [_min, _max], [0, _width]))
+
+            rect = QtCore.QRect(QtCore.QPoint(loop_visual_start, 0), QtCore.QPoint(loop_visual_end, _height))
+            painter.fillRect(rect, brush)
+
         # Paint checkpoints
         checkpoints = self.parent().checkpoints
         for checkpoint in checkpoints.values():
@@ -85,6 +101,7 @@ class TrackerWidget(QtWidgets.QWidget):
     _maximum = 100
 
     checkpoints = {}
+    loop = None
 
     trackerMoved = QtCore.pyqtSignal(int)
 
@@ -251,4 +268,16 @@ class TrackerWidget(QtWidgets.QWidget):
 
     def removeCheckpoint(self, index):
         del self.checkpoints[index]
+        self.tracker.update()
+    
+    def removeCheckpoints(self):
+        self.checkpoints = {}
+        self.tracker.update()
+
+    def setLoop(self, loop):
+        self.loop = loop
+        self.tracker.update()
+
+    def removeLoop(self):
+        self.loop = None
         self.tracker.update()

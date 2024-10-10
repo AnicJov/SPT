@@ -43,6 +43,7 @@ class MainWindow(QMainWindow):
 
     checkpoints = {}
     checkpoint_colors = ["#a6e3a1", "#89b4fa", "#f9e2af", "#f5c2e7"]
+    loop = None
 
     def __init__(self):
         super().__init__()
@@ -106,6 +107,9 @@ class MainWindow(QMainWindow):
             self.checkpoint_buttons.append((checkpoint_set, checkpoint_load))
 
         self.media_button_size = QSize(40, 40)
+        self.media_ctrl_loop = QPushButton(QIcon.fromTheme("view-refresh"), "")
+        self.media_ctrl_loop.setFixedSize(self.media_button_size)
+        self.media_ctrl_loop.setToolTip("Loop current section")
         self.media_ctrl_ld_back = QPushButton(QIcon.fromTheme("media-skip-backward"), "")
         self.media_ctrl_ld_back.setFixedSize(self.media_button_size)
         self.media_ctrl_back = QPushButton(QIcon.fromTheme("media-seek-backward"), "")
@@ -173,6 +177,7 @@ class MainWindow(QMainWindow):
             self.checkpoint_section.addWidget(buttons[0], 0, i)
             self.checkpoint_section.addWidget(buttons[1], 1, i)
 
+        self.media_ctrl_section.addWidget(self.media_ctrl_loop)
         self.media_ctrl_section.addWidget(self.media_ctrl_ld_back)
         self.media_ctrl_section.addWidget(self.media_ctrl_back)
         self.media_ctrl_section.addWidget(self.media_ctrl_play_pause)
@@ -242,6 +247,7 @@ class MainWindow(QMainWindow):
         self.mixer_master.volumeChanged.connect(self.volume_changed)
         self.mixer_master.trackMuted.connect(self.track_muted)
 
+        self.media_ctrl_loop.clicked.connect(self.toggle_loop)
         self.media_ctrl_play_pause.clicked.connect(self.play_pause)
         self.media_ctrl_back.clicked.connect(self.skip_backward)
         self.media_ctrl_fwd.clicked.connect(self.skip_forward)
@@ -270,7 +276,7 @@ class MainWindow(QMainWindow):
         self.tracker.setForegroundColor(self.palette().highlight().color())
         self.tracker.setFixedHeight(100)
 
-        self.player_other.sourceChanged.connect(self.tracker.update_source)
+        self.player_other.sourceChanged.connect(self.update_source)
         self.tracker_section.addWidget(self.tracker)
 
         self.tracker.trackerMoved.connect(self.change_position)
@@ -285,6 +291,31 @@ class MainWindow(QMainWindow):
         self.tracker_labels_section.addWidget(self.tracker_duration_label)
 
         self.soundwave_select.activated.connect(self.change_wavefrom_display)
+
+    def update_source(self):
+        self.loop = None
+        self.tracker.removeLoop()
+        self.checkpoints = {}
+        self.tracker.removeCheckpoints()
+        for button in self.checkpoint_buttons:
+            button[1].setEnabled(False)
+            button[1].setHighlighted(False)
+        self.tracker.update_source()
+
+    def toggle_loop(self):
+        if self.loop is not None:
+            self.loop = None
+            self.tracker.removeLoop()
+            return
+
+        prev_checkpoint = self.get_previous_checkpoint(250)
+        next_checkpoint = self.get_next_checkpoint(250)
+
+        loop_start = prev_checkpoint if prev_checkpoint is not None else 0
+        loop_end = next_checkpoint if next_checkpoint is not None else self.media_duration
+        
+        self.loop = (loop_start, loop_end)
+        self.tracker.setLoop(self.loop)
 
     def change_wavefrom_display(self, index):
         if index == 0:
@@ -322,12 +353,14 @@ class MainWindow(QMainWindow):
         self.player_vocals.setSource(QUrl.fromLocalFile(self.media_separated_dir + "vocals.wav"))
         self.player_other.setSource(QUrl.fromLocalFile(self.media_separated_dir + "other.wav"))
 
-
-    def load_previous_checkpoint(self):
+    
+    def get_previous_checkpoint(self, threshold):
+        """
+        threshold: Number of milliseconds in which the checkpoint will not be counted
+        """
         current_pos = self.player_other.position()
         min_diff = math.inf
         prev_checkpoint = None
-        threshold = 250 # Number of milliseconds in which the checkpoint will not be counted
 
         for checkpoint in self.checkpoints.values():
             if current_pos - checkpoint < threshold:
@@ -336,22 +369,26 @@ class MainWindow(QMainWindow):
                 min_diff = (current_pos - checkpoint)
                 prev_checkpoint = checkpoint
 
-        if prev_checkpoint is not None:
-            self.player_drums.setPosition(prev_checkpoint)
-            self.player_bass.setPosition(prev_checkpoint)
-            self.player_vocals.setPosition(prev_checkpoint)
-            self.player_other.setPosition(prev_checkpoint)
-        else:
-            self.player_drums.setPosition(0)
-            self.player_bass.setPosition(0)
-            self.player_vocals.setPosition(0)
-            self.player_other.setPosition(0)
+        return prev_checkpoint
 
-    def load_next_checkpoint(self):
+    def load_previous_checkpoint(self):
+        prev_checkpoint = self.get_previous_checkpoint(250)
+
+        if prev_checkpoint is None:
+            prev_checkpoint = 0
+
+        self.player_drums.setPosition(prev_checkpoint)
+        self.player_bass.setPosition(prev_checkpoint)
+        self.player_vocals.setPosition(prev_checkpoint)
+        self.player_other.setPosition(prev_checkpoint)
+
+    def get_next_checkpoint(self, threshold):
+        """
+        threshold: Number of milliseconds in which the checkpoint will not be counted
+        """
         current_pos = self.player_other.position()
         min_diff = math.inf
         next_checkpoint = None
-        threshold = 250 # Number of milliseconds in which the checkpoint will not be counted
 
         for checkpoint in self.checkpoints.values():
             if checkpoint - current_pos < threshold:
@@ -360,16 +397,18 @@ class MainWindow(QMainWindow):
                 min_diff = (checkpoint - current_pos)
                 next_checkpoint = checkpoint
         
-        if next_checkpoint is not None:
-            self.player_drums.setPosition(next_checkpoint)
-            self.player_bass.setPosition(next_checkpoint)
-            self.player_vocals.setPosition(next_checkpoint)
-            self.player_other.setPosition(next_checkpoint)
-        else:
-            self.player_drums.setPosition(self.media_duration)
-            self.player_bass.setPosition(self.media_duration)
-            self.player_vocals.setPosition(self.media_duration)
-            self.player_other.setPosition(self.media_duration)
+        return next_checkpoint
+
+    def load_next_checkpoint(self):
+        next_checkpoint = self.get_next_checkpoint(250)
+        
+        if next_checkpoint is None:
+            next_checkpoint = self.media_duration
+
+        self.player_drums.setPosition(next_checkpoint)
+        self.player_bass.setPosition(next_checkpoint)
+        self.player_vocals.setPosition(next_checkpoint)
+        self.player_other.setPosition(next_checkpoint)
 
     def load_checkpoint(self, index):
         if self.checkpoints[index] is not None:
@@ -484,9 +523,21 @@ class MainWindow(QMainWindow):
         self.tracker_duration_label.setText(self._ms_to_timestamp(duration))
 
     def update_current_position(self, position):
+        # FIXME: This probably loops even when scrubbing the tracker
+        self.check_for_loop(position, 25)
         self.media_position = position
         self.tracker.setTrackerPosition(self.media_position)
         self.tracker_current_label.setText(self._ms_to_timestamp(position))
+
+    def check_for_loop(self, new_position, threshold):
+        """
+        threshold: Range of milliseconds to still count as a loop
+        """
+        if self.loop is None:
+            return
+
+        if new_position in range(self.loop[1] - threshold // 2, self.loop[1] + threshold // 2):
+            self.change_position(self.loop[0])
     
     def volume_changed(self, value, track):
         match track:
