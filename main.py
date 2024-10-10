@@ -3,9 +3,9 @@ from os import path
 import math
 from datetime import datetime
 
-from PyQt6.QtCore import Qt, QSize, QUrl
+from PyQt6.QtCore import Qt, QSize, QUrl, QTimer
 from PyQt6.QtGui import QIcon, QPalette, QColor, QFont, QKeySequence
-from PyQt6.QtMultimedia import QAudioOutput, QMediaPlayer
+from PyQt6.QtMultimedia import QAudioOutput, QMediaPlayer, QMediaTimeRange
 from PyQt6.QtWidgets import (
     QApplication,
     QWidget,
@@ -18,9 +18,12 @@ from PyQt6.QtWidgets import (
     QVBoxLayout,
     QHBoxLayout,
     QLayout,
+    QFormLayout,
     QGridLayout,
     QFileDialog,
     QComboBox,
+    QLineEdit,
+    QSpinBox,
 )
 
 import demucs.separate
@@ -44,6 +47,9 @@ class MainWindow(QMainWindow):
     checkpoints = {}
     checkpoint_colors = ["#a6e3a1", "#89b4fa", "#f9e2af", "#f5c2e7", "#fab387", "#94e2d5"]
     loop = None
+
+    start_delay_timer = QTimer()
+    loop_delay_timer = QTimer()
 
     def __init__(self):
         super().__init__()
@@ -72,6 +78,8 @@ class MainWindow(QMainWindow):
         self.speed_ctrl_section = QVBoxLayout()
         self.speed_fine_section = QHBoxLayout()
         self.speed_coarse_section = QHBoxLayout()
+
+        self.timing_section = QGridLayout()
 
         self.mixer_section = QHBoxLayout()
         self.mixer_section.setAlignment(Qt.AlignmentFlag.AlignJustify)
@@ -125,9 +133,11 @@ class MainWindow(QMainWindow):
         self.media_ctrl_back = QPushButton(QIcon.fromTheme("media-seek-backward"), "")
         self.media_ctrl_back.setFixedSize(self.media_button_size)
         self.media_ctrl_back.setShortcut(QKeySequence.fromString("J"))
-        self.media_ctrl_play_pause = QPushButton(QIcon.fromTheme("media-play"), "")
+        self.media_ctrl_play_pause = ColorButton(QIcon.fromTheme("media-play"), "")
         self.media_ctrl_play_pause.setFixedSize(self.media_button_size)
         self.media_ctrl_play_pause.setShortcut(QKeySequence.fromString("K"))
+        self.media_ctrl_play_pause.setHighlighted(False)
+        self.media_ctrl_play_pause.setHighlightColor("#f9e2af")
         self.media_ctrl_fwd = QPushButton(QIcon.fromTheme("media-seek-forward"), "")
         self.media_ctrl_fwd.setFixedSize(self.media_button_size)
         self.media_ctrl_fwd.setShortcut(QKeySequence.fromString("L"))
@@ -150,6 +160,36 @@ class MainWindow(QMainWindow):
             if predefined_speeds_shortcuts[i] is not None:
                 button.setShortcut(QKeySequence.fromString(predefined_speeds_shortcuts[i]))
             self.speed_ctrl_buttons.append((button, speed))
+
+        self.metronome_label = QLabel("Metronome")
+        self.metronome_sync_button = QPushButton(QIcon.fromTheme("document-revert"), "")
+        self.metronome_sync_button.setToolTip("Sync metronome playback with song playback")
+        self.metronome_sync_button.setFixedSize(self.media_button_size)
+        self.metronome_play_button = QPushButton(QIcon.fromTheme("media-play"), "")
+        self.metronome_play_button.setToolTip("Start metronome")
+        self.metronome_play_button.setFixedSize(self.media_button_size)
+        self.bpm_label = QLabel("BPM")
+        self.bpm_input = QSpinBox()
+        self.bpm_input.setRange(30, 300)
+        self.bpm_input.setValue(100)
+        self.bpm_offset_label = QLabel("Offset")
+        self.bpm_offset_input = QSpinBox()
+        self.bpm_offset_input.setRange(-1000, 1000)
+        self.bpm_offset_input.setValue(0)
+        self.bpm_offset_input.setSuffix("ms")
+        self.delay_label = QLabel("Start/Loop delay")
+        self.start_delay_label = QLabel("Start")
+        self.start_delay_input = QSpinBox()
+        self.start_delay_input.setRange(0, 20)
+        self.start_delay_input.setValue(0)
+        self.start_delay_input.setSuffix("s")
+        self.loop_delay_label = QLabel("Loop")
+        self.loop_delay_input = QSpinBox()
+        self.loop_delay_input.setRange(0, 20)
+        self.loop_delay_input.setValue(0)
+        self.loop_delay_input.setSuffix("s")
+        self.delay_type_select = QComboBox()
+        self.delay_type_select.addItems(['seconds', 'beats'])
 
         palette = self.palette()
         self.mixer_drums = MixerWidget(labelText="Drums")
@@ -184,6 +224,7 @@ class MainWindow(QMainWindow):
         self.main_layout.addLayout(self.tracker_section)
         self.main_layout.addLayout(self.pos_ctrl_section)
         self.main_layout.addLayout(self.speed_ctrl_section)
+        self.main_layout.addLayout(self.timing_section)
         self.main_layout.addLayout(self.mixer_section)
         self.main_layout.addLayout(self.footer_section)
 
@@ -214,6 +255,21 @@ class MainWindow(QMainWindow):
 
         for button, speed in self.speed_ctrl_buttons:
             self.speed_coarse_section.addWidget(button)
+
+        self.timing_section.addWidget(self.metronome_label, 0, 0, 1, 2)
+        self.timing_section.addWidget(self.delay_label, 0, 7, 1, 2)
+        self.timing_section.addWidget(self.metronome_sync_button, 1, 0)
+        self.timing_section.addWidget(self.metronome_play_button, 1, 1)
+        self.timing_section.addWidget(self.bpm_label, 1, 2)
+        self.timing_section.addWidget(self.bpm_input, 1, 3)
+        self.timing_section.addWidget(self.bpm_offset_label, 1, 4)
+        self.timing_section.addWidget(self.bpm_offset_input, 1, 5)
+        self.timing_section.addItem(QSpacerItem(10, 10, QSizePolicy.Policy.MinimumExpanding, QSizePolicy.Policy.Minimum), 1, 6)
+        self.timing_section.addWidget(self.start_delay_label, 1, 7)
+        self.timing_section.addWidget(self.start_delay_input, 1, 8)
+        self.timing_section.addWidget(self.loop_delay_label, 1, 9)
+        self.timing_section.addWidget(self.loop_delay_input, 1, 10)
+        self.timing_section.addWidget(self.delay_type_select, 1, 11)
 
         self.mixer_section.addWidget(self.mixer_drums)
         self.mixer_section.addWidget(self.mixer_bass)
@@ -563,7 +619,27 @@ class MainWindow(QMainWindow):
             return
 
         if new_position in range(self.loop[1] - threshold // 2, self.loop[1] + threshold * 2):
-            self.change_position(self.loop[0])
+            # Check for loop delay
+            loop_delay = self.loop_delay_input.value()
+            # FIXME: This should probably stop playback and resume after timer elapses
+            if loop_delay != 0:
+                self.loop_delay_timer.timeout.connect(self._do_loop)
+                self.loop_delay_timer.setInterval(loop_delay * 1000)
+                self.loop_delay_timer.setSingleShot(True)
+                self.loop_delay_timer.start()
+                self.media_ctrl_play_pause.setHighlighted(True)
+                self._pause()
+                return
+
+            self._do_loop()
+
+    
+    def _do_loop(self):
+        # Paused due to loop delay
+        if self.media_state == "paused":
+            self._play()
+
+        self.change_position(self.loop[0])
     
     def volume_changed(self, value, track):
         # FIXME: Use audio_output.setMuted for mute
@@ -607,14 +683,40 @@ class MainWindow(QMainWindow):
     def play(self):
         self.media_state = "playing"
         self.media_ctrl_play_pause.setIcon(QIcon.fromTheme("media-pause"))
+
+        # Delay playing if delay is set
+        start_delay = self.start_delay_input.value()
+        if start_delay != 0:
+            self.start_delay_timer.timeout.connect(self._play)
+            self.start_delay_timer.setInterval(start_delay * 1000)
+            self.start_delay_timer.setSingleShot(True)
+            self.start_delay_timer.start()
+            self.media_ctrl_play_pause.setHighlighted(True)
+            return
+        
+        self._play()
+
+    def _play(self):
+        self.media_ctrl_play_pause.setHighlighted(False)
         self.player_drums.play()
         self.player_bass.play()
         self.player_vocals.play()
         self.player_other.play()
 
     def pause(self):
+        # Pause initiated during start delay period
+        if self.start_delay_timer.isActive():
+            self.media_ctrl_play_pause.setHighlighted(False)
+            self.start_delay_timer.stop()
+        # Paude initiated during loop delay period
+        if self.loop_delay_timer.isActive():
+            self.loop_delay_timer.stop()
+
         self.media_state = "paused"
         self.media_ctrl_play_pause.setIcon(QIcon.fromTheme("media-play"))
+        self._pause()
+
+    def _pause(self):
         self.player_drums.pause()
         self.player_bass.pause()
         self.player_vocals.pause()
