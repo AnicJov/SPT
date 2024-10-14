@@ -57,7 +57,7 @@ class MainWindow(QMainWindow):
 
         # General settings
         self.setWindowTitle(self.window_title)
-        self.setWindowIcon(QIcon("res/spt_icon.webp"))
+        self.setWindowIcon(QIcon("res/spt_icon.svg"))
         self.setMinimumSize(QSize(400, 550))
 
         # Layout definitions
