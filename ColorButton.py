@@ -29,6 +29,7 @@ class ColorButton(QtWidgets.QPushButton):
         color.setAlpha(self._highlight_alpha)
 
         painter = QtGui.QPainter(self)
+        painter.setRenderHint(QtGui.QPainter.RenderHint.Antialiasing)
         pen = QtGui.QPen()
         pen.setColor(color)
         pen.setStyle(Qt.PenStyle.SolidLine)
@@ -38,7 +39,6 @@ class ColorButton(QtWidgets.QPushButton):
         padding = self._highlight_padding
         radius = self._highlight_radius
 
-        # FIXME: This rect draws very weirdly
         path = QtGui.QPainterPath()
         path.addRoundedRect(padding, padding, width - padding * 2, height - padding * 2, radius, radius)
         painter.setPen(pen)
